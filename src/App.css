@@ -1165,19 +1165,23 @@ img {
 }
 
 .inline-span-editor {
-  display: inline-flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: wrap;
+  position: relative;
+  display: inline-grid;
+  gap: 8px;
   min-width: 0;
+  padding: 12px 52px 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
 }
 
 .inline-span-editor input,
 .inline-span-editor textarea {
+  width: 100%;
   min-width: 180px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  background: rgba(0, 0, 0, 0.25);
+  background: rgba(0, 0, 0, 0.28);
   color: #f3f1eb;
   padding: 11px 14px;
   outline: none;
@@ -1194,14 +1198,25 @@ img {
 }
 
 .inline-span-button {
+  position: absolute;
+  top: 10px;
+  right: 10px;
   flex: 0 0 auto;
 }
 
 .compact-row-editor {
+  position: relative;
+  display: block;
+  min-width: 0;
+  padding: 12px 52px 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+}
+
+.compact-row-shell {
   display: grid;
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  gap: 10px;
-  align-items: center;
+  gap: 8px;
 }
 
 .compact-row-editor input {

@@ -491,15 +491,17 @@ function CompactRowEditor({ label, value, onChange, placeholder, className = '' 
 
   return (
     <div className={`compact-row-editor ${className}${isEditing ? ' is-editing' : ''}`}>
-      <span className="compact-row-label">{label}</span>
-      {isEditing ? (
-        <input autoFocus type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      ) : (
-        <button className="compact-row-value" type="button" onClick={handleToggle}>
-          <strong>{inlinePreviewText(value, placeholder, 'text')}</strong>
-        </button>
-      )}
-      <button className="tiny-button" type="button" onClick={handleToggle}>
+      <div className="compact-row-shell">
+        <span className="compact-row-label">{label}</span>
+        {isEditing ? (
+          <input autoFocus type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+        ) : (
+          <button className="compact-row-value" type="button" onClick={handleToggle}>
+            <strong>{inlinePreviewText(value, placeholder, 'text')}</strong>
+          </button>
+        )}
+      </div>
+      <button className="tiny-button inline-span-button" type="button" onClick={handleToggle}>
         {isEditing ? '저장' : '수정'}
       </button>
     </div>
