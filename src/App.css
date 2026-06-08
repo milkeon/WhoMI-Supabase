@@ -1164,12 +1164,111 @@ img {
   position: relative;
 }
 
-.inline-field-preview {
+.inline-span-editor {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  min-width: 0;
+}
+
+.inline-span-editor input,
+.inline-span-editor textarea {
+  min-width: 180px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #f3f1eb;
+  padding: 11px 14px;
+  outline: none;
+}
+
+.inline-span-editor textarea {
+  min-height: 110px;
+  resize: vertical;
+}
+
+.inline-span-text {
+  display: inline-block;
+  cursor: pointer;
+}
+
+.inline-span-button {
+  flex: 0 0 auto;
+}
+
+.compact-row-editor {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+}
+
+.compact-row-editor input {
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.25);
+  color: #f3f1eb;
+  outline: none;
+}
+
+.compact-row-label {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(243, 241, 235, 0.56);
+}
+
+.compact-row-value {
+  display: inline-flex;
+  align-items: center;
+  justify-content: flex-start;
+  min-height: 42px;
+  padding: 10px 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.2);
+  color: #f3f1eb;
+  text-align: left;
+  cursor: pointer;
+}
+
+.compact-row-value strong {
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.compact-inline-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.compact-inline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.compact-inline-head span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(243, 241, 235, 0.52);
+}
+
+.compact-inline-preview {
   display: grid;
   gap: 4px;
   width: 100%;
-  min-height: 46px;
-  padding: 12px 14px;
+  min-height: 44px;
+  padding: 10px 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
   background: rgba(0, 0, 0, 0.22);
@@ -1178,15 +1277,14 @@ img {
   cursor: pointer;
 }
 
-.inline-field-preview strong {
+.compact-inline-preview strong {
   font-size: 14px;
   line-height: 1.45;
-  font-weight: 700;
   white-space: pre-wrap;
   word-break: break-word;
 }
 
-.inline-field-preview span {
+.compact-inline-preview span {
   font-size: 11px;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1194,81 +1292,130 @@ img {
   color: rgba(243, 241, 235, 0.5);
 }
 
-.inline-field-preview-textarea {
-  min-height: 110px;
-}
-
-.field {
+.compact-inline-file {
   display: grid;
   gap: 8px;
-}
-
-.field > span {
-  font-size: 12px;
-  font-weight: 700;
-  color: rgba(243, 241, 235, 0.64);
-}
-
-.field input,
-.field textarea,
-.field select {
-  width: 100%;
-  min-height: 46px;
   padding: 12px 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
-  background: rgba(0, 0, 0, 0.25);
-  color: #f3f1eb;
-  outline: none;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.field textarea {
-  min-height: 110px;
-  resize: vertical;
+.hero-badge-row,
+.hero-kicker-row,
+.hero-copy-row {
+  display: block;
 }
 
-.field input:focus,
-.field textarea:focus,
-.field select:focus {
-  border-color: rgba(165, 208, 175, 0.6);
-  box-shadow: 0 0 0 3px rgba(165, 208, 175, 0.12);
+.hero-badge-inline .inline-span-text,
+.hero-kicker-inline .inline-span-text,
+.hero-copy-inline .inline-span-text,
+.hero-title-line-editor .inline-span-text {
+  display: block;
 }
 
-.field input[type='file'] {
-  padding: 10px 12px;
+.hero-badge-inline .inline-span-text {
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: rgba(243, 241, 235, 0.7);
 }
 
-.list-item-editor,
-.nested-editor {
+.hero-kicker-inline .inline-span-text {
+  color: rgba(243, 241, 235, 0.52);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hero-title-line-editor {
+  width: 100%;
+}
+
+.hero-title-line-editor .inline-span-text {
+  line-height: 0.83;
+  letter-spacing: -0.12em;
+  font-size: clamp(88px, 12.4vw, 170px);
+  font-weight: 900;
+  white-space: nowrap;
+}
+
+.hero-title-line-editor input {
+  width: 100%;
+  min-width: 0;
+  line-height: 0.83;
+  letter-spacing: -0.12em;
+  font-size: clamp(88px, 12.4vw, 170px);
+  font-weight: 900;
+}
+
+.hero-copy-inline .inline-span-text {
+  color: rgba(243, 241, 235, 0.72);
+  font-size: 17px;
+  line-height: 1.78;
+  white-space: pre-wrap;
+}
+
+.meta-label-inline .inline-span-text,
+.meta-value-inline .inline-span-text {
+  display: block;
+}
+
+.meta-label-inline .inline-span-text {
+  color: rgba(243, 241, 235, 0.46);
+  font-size: 11px;
+  font-weight: 900;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.meta-value-inline .inline-span-text {
+  font-size: 15px;
+  line-height: 1.45;
+  font-weight: 700;
+}
+
+.hero-actions {
+  align-items: flex-start;
+}
+
+.hero-action-item {
   display: grid;
   gap: 10px;
-  padding: 14px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 18px;
-  background: rgba(0, 0, 0, 0.16);
 }
 
-.list-item-editor.stack {
-  gap: 12px;
+.hero-action-edit {
+  display: grid;
+  gap: 10px;
 }
 
-.tiny-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 34px;
-  padding: 0 12px;
-  border-radius: 999px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  background: rgba(255, 255, 255, 0.04);
-  color: #f3f1eb;
-  font-size: 12px;
-  font-weight: 800;
-  cursor: pointer;
+.hero-action-edit .field-row-head {
+  display: flex;
 }
 
-.align-right {
-  justify-self: end;
+.portrait-edit-strip {
+  display: grid;
+  gap: 10px;
+  width: 100%;
+}
+
+.portrait-image-inline input[type='file'] {
+  width: 100%;
+  color: rgba(243, 241, 235, 0.9);
+}
+
+.hero-portrait .portrait-photo {
+  position: relative;
+}
+
+.hero-portrait .portrait-edit-strip {
+  position: relative;
+  z-index: 2;
+}
+
+.hero-portrait .portrait-edit-strip .compact-row-editor,
+.hero-portrait .portrait-edit-strip .compact-inline-editor {
+  width: 100%;
 }
 
 .settings-card-code pre {

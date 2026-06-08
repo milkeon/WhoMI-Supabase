@@ -447,72 +447,6 @@ function inlinePreviewText(value, placeholder, type) {
   return text || placeholder || '비어 있음'
 }
 
-function InputField({ label, value, onChange, placeholder, type = 'text' }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const preview = inlinePreviewText(value, placeholder, type)
-
-  return (
-    <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
-      <div className="field-row-head">
-        <span>{label}</span>
-        <button
-          className="tiny-button"
-          type="button"
-          onClick={() => {
-            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
-              window.__WHOMI_SAVE__()
-            }
-            setIsEditing((prev) => !prev)
-          }}
-        >
-          {isEditing ? '저장' : '수정'}
-        </button>
-      </div>
-      {isEditing ? (
-        <input autoFocus type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      ) : (
-        <button className="inline-field-preview" type="button" onClick={() => setIsEditing(true)}>
-          <strong>{preview}</strong>
-          <span>클릭해서 수정</span>
-        </button>
-      )}
-    </div>
-  )
-}
-
-function TextAreaField({ label, value, onChange, placeholder, rows = 4 }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const preview = String(value || '').trim() || placeholder || '비어 있음'
-
-  return (
-    <div className={`field field-textarea inline-field${isEditing ? ' is-editing' : ''}`}>
-      <div className="field-row-head">
-        <span>{label}</span>
-        <button
-          className="tiny-button"
-          type="button"
-          onClick={() => {
-            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
-              window.__WHOMI_SAVE__()
-            }
-            setIsEditing((prev) => !prev)
-          }}
-        >
-          {isEditing ? '저장' : '수정'}
-        </button>
-      </div>
-      {isEditing ? (
-        <textarea autoFocus rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-      ) : (
-        <button className="inline-field-preview inline-field-preview-textarea" type="button" onClick={() => setIsEditing(true)}>
-          <strong>{preview}</strong>
-          <span>클릭해서 수정</span>
-        </button>
-      )}
-    </div>
-  )
-}
-
 function SelectField({ label, value, onChange, children }) {
   const [isEditing, setIsEditing] = useState(false)
   const preview = inlinePreviewText(value, '', 'text')
@@ -543,6 +477,62 @@ function SelectField({ label, value, onChange, children }) {
         </button>
       )}
     </div>
+  )
+}
+
+function CompactRowEditor({ label, value, onChange, placeholder, className = '' }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const handleToggle = () => {
+    if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+      window.__WHOMI_SAVE__()
+    }
+    setIsEditing((prev) => !prev)
+  }
+
+  return (
+    <div className={`compact-row-editor ${className}${isEditing ? ' is-editing' : ''}`}>
+      <span className="compact-row-label">{label}</span>
+      {isEditing ? (
+        <input autoFocus type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <button className="compact-row-value" type="button" onClick={handleToggle}>
+          <strong>{inlinePreviewText(value, placeholder, 'text')}</strong>
+        </button>
+      )}
+      <button className="tiny-button" type="button" onClick={handleToggle}>
+        {isEditing ? '저장' : '수정'}
+      </button>
+    </div>
+  )
+}
+
+function InlineSpanEditor({ value, onChange, placeholder, className = '', textClassName = '', multiline = false, rows = 3, type = 'text' }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const text = inlinePreviewText(value, placeholder, type)
+  const handleToggle = () => {
+    if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+      window.__WHOMI_SAVE__()
+    }
+    setIsEditing((prev) => !prev)
+  }
+
+  return (
+    <span className={`inline-span-editor ${className}${isEditing ? ' is-editing' : ''}`}>
+      {isEditing ? (
+        multiline ? (
+          <textarea autoFocus rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+        ) : (
+          <input autoFocus type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+        )
+      ) : (
+        <span className={`inline-span-text ${textClassName}`} onClick={handleToggle} role="button" tabIndex={0}>
+          {text}
+        </span>
+      )}
+      <button className="tiny-button inline-span-button" type="button" onClick={handleToggle}>
+        {isEditing ? '저장' : '수정'}
+      </button>
+    </span>
   )
 }
 
@@ -1182,135 +1172,135 @@ function App() {
       <main>
         <section className="hero reveal-up" id="home">
           <div className="hero-copy-column">
-            <p className="hero-badge">{data.hero.badge}</p>
-            <p className="hero-kicker">{data.hero.kicker}</p>
+            <div className="hero-badge-row">
+              {isSettingMode ? (
+                <InlineSpanEditor
+                  className="hero-badge-inline"
+                  textClassName="hero-badge"
+                  value={data.hero.badge}
+                  onChange={(value) => updateSection('hero', { badge: value })}
+                  placeholder="배지 문구"
+                />
+              ) : (
+                <p className="hero-badge">{data.hero.badge}</p>
+              )}
+            </div>
+
+            <div className="hero-kicker-row">
+              {isSettingMode ? (
+                <InlineSpanEditor
+                  className="hero-kicker-inline"
+                  textClassName="hero-kicker"
+                  value={data.hero.kicker}
+                  onChange={(value) => updateSection('hero', { kicker: value })}
+                  placeholder="상단 안내 문구"
+                />
+              ) : (
+                <p className="hero-kicker">{data.hero.kicker}</p>
+              )}
+            </div>
 
             <h1 className="hero-title" aria-label={data.hero.titleLines.join(' ')}>
-              {data.hero.titleLines.map((line, index) => (
-                <span className="hero-title-line" key={`${line}-${index}`}>{line}</span>
-              ))}
+              {data.hero.titleLines.map((line, index) =>
+                isSettingMode ? (
+                  <InlineSpanEditor
+                    key={`hero-title-${index}`}
+                    className="hero-title-line-editor"
+                    textClassName="hero-title-line"
+                    value={line}
+                    onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
+                    placeholder="제목 줄"
+                  />
+                ) : (
+                  <span className="hero-title-line" key={`${line}-${index}`}>
+                    {line}
+                  </span>
+                ),
+              )}
             </h1>
 
-            <p className="hero-copy">{data.hero.copy}</p>
+            <div className="hero-copy-row">
+              {isSettingMode ? (
+                <InlineSpanEditor
+                  className="hero-copy-inline"
+                  textClassName="hero-copy"
+                  multiline
+                  rows={4}
+                  value={data.hero.copy}
+                  onChange={(value) => updateSection('hero', { copy: value })}
+                  placeholder="소개 문구"
+                />
+              ) : (
+                <p className="hero-copy">{data.hero.copy}</p>
+              )}
+            </div>
 
             <div className="hero-meta">
               {data.hero.meta.map((item) => (
                 <div className="meta-chip" key={item.id}>
-                  <span>{item.label}</span>
-                  <strong>{item.value}</strong>
+                  <span>
+                    {isSettingMode ? (
+                      <InlineSpanEditor
+                        className="meta-label-inline"
+                        textClassName="meta-label"
+                        value={item.label}
+                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
+                        placeholder="라벨"
+                      />
+                    ) : (
+                      item.label
+                    )}
+                  </span>
+                  <strong>
+                    {isSettingMode ? (
+                      <InlineSpanEditor
+                        className="meta-value-inline"
+                        textClassName="meta-value"
+                        value={item.value}
+                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
+                        placeholder="값"
+                      />
+                    ) : (
+                      item.value
+                    )}
+                  </strong>
                 </div>
               ))}
             </div>
 
             <div className="hero-actions">
               {data.hero.actions.map((action) => (
-                <a className={`button ${action.variant === 'primary' ? 'primary' : 'secondary'}`} href={action.href} key={action.id}>
-                  {action.label}
-                </a>
+                <div className="hero-action-item" key={action.id}>
+                  <a className={`button ${action.variant === 'primary' ? 'primary' : 'secondary'}`} href={action.href}>
+                    {action.label}
+                  </a>
+                  {isSettingMode ? (
+                    <div className="hero-action-edit">
+                      <CompactRowEditor
+                        label="라벨"
+                        value={action.label}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
+                        placeholder="버튼 라벨"
+                      />
+                      <CompactRowEditor
+                        label="링크"
+                        value={action.href}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
+                        placeholder="#"
+                      />
+                      <SelectField
+                        label="종류"
+                        value={action.variant}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
+                      >
+                        <option value="primary">primary</option>
+                        <option value="secondary">secondary</option>
+                      </SelectField>
+                    </div>
+                  ) : null}
+                </div>
               ))}
             </div>
-
-            {isSettingMode ? (
-              <div className="hero-inline-editor reveal-up" id="hero-edit">
-                <div className="settings-card-head">
-                  <div>
-                    <p className="settings-note">인라인 편집</p>
-                    <h2 className="section-title">메인 화면을 그대로 보면서 바로 수정</h2>
-                  </div>
-                  <button className="button primary small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
-                    {dbLoading ? '저장 중...' : 'Firebase 저장'}
-                  </button>
-                </div>
-
-                <div className="hero-inline-grid">
-                  <InputField label="상단 배지" value={data.hero.badge} onChange={(value) => updateSection('hero', { badge: value })} placeholder="배지 문구" />
-                  <InputField label="상단 문구" value={data.hero.kicker} onChange={(value) => updateSection('hero', { kicker: value })} placeholder="상단 안내 문구" />
-
-                  <div className="hero-inline-title-group">
-                    <p className="settings-note">큰 제목</p>
-                    <div className="hero-inline-title-lines">
-                      {data.hero.titleLines.map((line, index) => (
-                        <InputField
-                          key={`hero-title-${index}`}
-                          label={`제목 ${index + 1}`}
-                          value={line}
-                          onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
-                          placeholder="제목 줄"
-                        />
-                      ))}
-                    </div>
-                  </div>
-
-                  <TextAreaField label="소개 문구" value={data.hero.copy} onChange={(value) => updateSection('hero', { copy: value })} placeholder="소개 문구" rows={4} />
-
-                  <div className="hero-inline-title-group">
-                    <p className="settings-note">메타 정보</p>
-                    <div className="hero-inline-meta-grid">
-                      {data.hero.meta.map((item) => (
-                        <div className="hero-inline-meta-item" key={item.id}>
-                          <InputField
-                            label={`${item.id} - 라벨`}
-                            value={item.label}
-                            onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
-                            placeholder="라벨"
-                          />
-                          <InputField
-                            label={`${item.id} - 값`}
-                            value={item.value}
-                            onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
-                            placeholder="값"
-                          />
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="hero-inline-title-group">
-                    <p className="settings-note">버튼 링크</p>
-                    <div className="hero-inline-meta-grid">
-                      {data.hero.actions.map((action) => (
-                        <div className="hero-inline-meta-item" key={action.id}>
-                          <InputField
-                            label={`${action.id} - 라벨`}
-                            value={action.label}
-                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
-                            placeholder="버튼 라벨"
-                          />
-                          <InputField
-                            label={`${action.id} - 링크`}
-                            value={action.href}
-                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
-                            placeholder="#"
-                          />
-                          <SelectField
-                            label={`${action.id} - 종류`}
-                            value={action.variant}
-                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
-                          >
-                            <option value="primary">primary</option>
-                            <option value="secondary">secondary</option>
-                          </SelectField>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-
-                  <div className="hero-inline-title-group">
-                    <p className="settings-note">사진 영역</p>
-                    <div className="hero-inline-meta-grid">
-                      <InputField label="사진 라벨" value={data.hero.portraitLabel} onChange={(value) => updateSection('hero', { portraitLabel: value })} placeholder="사진 라벨" />
-                      <InputField label="캡션 상단" value={data.hero.portraitCaptionTop} onChange={(value) => updateSection('hero', { portraitCaptionTop: value })} placeholder="캡션 상단" />
-                      <InputField label="캡션 하단" value={data.hero.portraitCaptionBottom} onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })} placeholder="캡션 하단" />
-                      <InputField label="이미지 URL" value={data.hero.portraitImage} onChange={(value) => updateSection('hero', { portraitImage: value })} placeholder="이미지 주소" />
-                      <label className="upload-inline">
-                        <span>이미지 업로드</span>
-                        <input type="file" accept="image/*" onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])} />
-                      </label>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ) : null}
           </div>
 
           <div className="hero-portrait" aria-label="사진1 영역">
@@ -1318,22 +1308,66 @@ function App() {
             <div className="hero-orb hero-orb-2" />
             <div className="portrait-frame">
               <div className="portrait-photo">
-                <span className="portrait-label">{data.hero.portraitLabel}</span>
-                <div className="portrait-art" aria-hidden="true">
-                  {data.hero.portraitImage ? (
-                    <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
-                  ) : (
-                    <>
-                      <div className="portrait-face" />
-                      <div className="portrait-glow portrait-glow-1" />
-                      <div className="portrait-glow portrait-glow-2" />
-                    </>
-                  )}
-                </div>
-                <div className="portrait-caption">
-                  <span>{data.hero.portraitCaptionTop}</span>
-                  <strong>{data.hero.portraitCaptionBottom}</strong>
-                </div>
+                {isSettingMode ? (
+                  <div className="portrait-edit-strip">
+                    <CompactRowEditor
+                      label="사진 라벨"
+                      value={data.hero.portraitLabel}
+                      onChange={(value) => updateSection('hero', { portraitLabel: value })}
+                      placeholder="사진 라벨"
+                    />
+                    <CompactRowEditor
+                      label="캡션 상단"
+                      value={data.hero.portraitCaptionTop}
+                      onChange={(value) => updateSection('hero', { portraitCaptionTop: value })}
+                      placeholder="캡션 상단"
+                    />
+                    <CompactRowEditor
+                      label="캡션 하단"
+                      value={data.hero.portraitCaptionBottom}
+                      onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })}
+                      placeholder="캡션 하단"
+                    />
+                    <div className="compact-inline-editor portrait-image-inline">
+                      <div className="compact-inline-head">
+                        <span>이미지</span>
+                        <button className="tiny-button" type="button" onClick={() => saveDbPortfolio()} disabled={dbLoading}>
+                          {dbLoading ? '저장 중...' : '저장'}
+                        </button>
+                      </div>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])}
+                      />
+                      <CompactRowEditor
+                        label="이미지 URL"
+                        value={data.hero.portraitImage}
+                        onChange={(value) => updateSection('hero', { portraitImage: value })}
+                        placeholder="이미지 주소"
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  <>
+                    <span className="portrait-label">{data.hero.portraitLabel}</span>
+                    <div className="portrait-art" aria-hidden="true">
+                      {data.hero.portraitImage ? (
+                        <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
+                      ) : (
+                        <>
+                          <div className="portrait-face" />
+                          <div className="portrait-glow portrait-glow-1" />
+                          <div className="portrait-glow portrait-glow-2" />
+                        </>
+                      )}
+                    </div>
+                    <div className="portrait-caption">
+                      <span>{data.hero.portraitCaptionTop}</span>
+                      <strong>{data.hero.portraitCaptionBottom}</strong>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
           </div>
