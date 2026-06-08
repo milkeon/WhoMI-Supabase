@@ -340,24 +340,30 @@ img {
 
 .image-upload-control {
   position: absolute;
-  right: 16px;
-  bottom: 16px;
-  z-index: 8;
+  top: 14px;
+  right: 14px;
+  left: auto;
+  bottom: auto;
+  z-index: 12;
   display: inline-flex;
+  max-width: calc(100% - 28px);
 }
 
 .hero-portrait .image-upload-control,
 .interview-photo .image-upload-control,
 .project-media .image-upload-control {
   position: absolute;
+  top: 14px;
   right: 14px;
-  bottom: 14px;
-  z-index: 9;
+  left: auto;
+  bottom: auto;
+  z-index: 12;
 }
 
 .image-upload-control .image-upload-trigger {
   cursor: pointer;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+  white-space: nowrap;
 }
 
 .image-upload-input {
