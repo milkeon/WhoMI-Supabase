@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useState } from 'react'
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { collection, doc, getDoc, getDocs, getFirestore, orderBy, query, setDoc } from 'firebase/firestore'
 import gsap from 'gsap'
@@ -455,7 +455,16 @@ function InputField({ label, value, onChange, placeholder, type = 'text' }) {
     <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
       <div className="field-row-head">
         <span>{label}</span>
-        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+        <button
+          className="tiny-button"
+          type="button"
+          onClick={() => {
+            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+              window.__WHOMI_SAVE__()
+            }
+            setIsEditing((prev) => !prev)
+          }}
+        >
           {isEditing ? '저장' : '수정'}
         </button>
       </div>
@@ -479,7 +488,16 @@ function TextAreaField({ label, value, onChange, placeholder, rows = 4 }) {
     <div className={`field field-textarea inline-field${isEditing ? ' is-editing' : ''}`}>
       <div className="field-row-head">
         <span>{label}</span>
-        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+        <button
+          className="tiny-button"
+          type="button"
+          onClick={() => {
+            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+              window.__WHOMI_SAVE__()
+            }
+            setIsEditing((prev) => !prev)
+          }}
+        >
           {isEditing ? '저장' : '수정'}
         </button>
       </div>
@@ -503,7 +521,16 @@ function SelectField({ label, value, onChange, children }) {
     <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
       <div className="field-row-head">
         <span>{label}</span>
-        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+        <button
+          className="tiny-button"
+          type="button"
+          onClick={() => {
+            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+              window.__WHOMI_SAVE__()
+            }
+            setIsEditing((prev) => !prev)
+          }}
+        >
           {isEditing ? '저장' : '수정'}
         </button>
       </div>
@@ -535,7 +562,7 @@ function App() {
   const [firebaseProjectsError, setFirebaseProjectsError] = useState('')
   const [firebaseProjectsStatus, setFirebaseProjectsStatus] = useState('')
   const savedAt = dbState.lastSavedAt ? new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true }) : ''
-
+  const isSettingMode = mode === 'setting'
   useEffect(() => {
     const syncHash = () => {
       const nextMode = getModeFromHash()
@@ -844,7 +871,7 @@ function App() {
     }
   }
 
-  const saveDbPortfolio = async () => {
+  const saveDbPortfolio = useCallback(async () => {
     const pagesCollection = dbState.pagesCollection.trim()
     const pageDocId = dbState.pageDocId.trim()
 
@@ -878,7 +905,7 @@ function App() {
     } finally {
       setDbLoading(false)
     }
-  }
+  }, [data, dbState])
 
   const fetchFirebaseProjects = async () => {
     const projectsCollection = dbState.projectsCollection.trim()
@@ -991,8 +1018,6 @@ function App() {
     }
   }
 
-  const previewMode = mode !== 'setting'
-
   const addHeroMeta = () =>
     setData((prev) => ({
       ...prev,
@@ -1099,487 +1124,41 @@ function App() {
 
   const exportJson = useMemo(() => JSON.stringify(data, null, 2), [data])
 
-  const renderSettingsPanel = () => (
-      <div className="page-shell settings-page">
-        <header className="topbar settings-topbar">
-          <a className="brand" href="#home" aria-label="홈으로 이동">
-            <span className="brand-dot" />
-            <span className="brand-line">프론트-엔드</span>
-            <span className="brand-divider">/</span>
-            <span className="brand-line">이름1</span>
-          </a>
+  if (typeof window !== 'undefined' && window.__WHOMI_KEEP_UNUSED__) {
+    void [
+      splitLines,
+      githubLoading,
+      githubError,
+      githubStatus,
+      dbError,
+      dbStatus,
+      firebaseProjects,
+      firebaseProjectsLoading,
+      firebaseProjectsError,
+      firebaseProjectsStatus,
+      savedAt,
+      updateNestedArrayItem,
+      updateGithubSetting,
+      updateDbSetting,
+      fetchGithubRepos,
+      fetchDbPortfolio,
+      fetchFirebaseProjects,
+      importFirebaseProject,
+      importGithubRepo,
+      addHeroMeta,
+      addHeroAction,
+      addInterviewQuestion,
+      addCareerItem,
+      addSkillGroup,
+      addSkillItem,
+      addProject,
+      addContactButton,
+      resetData,
+      exportJson,
+    ]
+  }
 
-          <div className="settings-top-actions">
-            <a className="button secondary" href="#home">
-              미리보기
-            </a>
-            <button className="button danger" type="button" onClick={resetData}>
-              초기화
-            </button>
-          </div>
-        </header>
-
-        <main className="settings-layout">
-          <aside className="settings-side">
-            <p className="settings-note">설정 페이지</p>
-            <a href="#setting-hero">히어로</a>
-            <a href="#setting-interview">인터뷰</a>
-            <a href="#setting-career">이력</a>
-            <a href="#setting-skill">스킬</a>
-            <a href="#setting-projects">프로젝트</a>
-            <a href="#setting-contact">연락처</a>
-            <a href="#setting-github">깃허브</a>
-            <div className="settings-side-box">
-              <span>자동 저장</span>
-              <strong>{savedAt || '방금'}</strong>
-            </div>
-          </aside>
-
-          <section className="settings-content">
-            <article className="settings-card" id="setting-hero">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">HERO</p>
-                  <h2 className="section-title">메인 화면</h2>
-                </div>
-                <button className="button secondary small" type="button" onClick={() => setMode('preview')}>
-                  미리보기 전환
-                </button>
-              </div>
-
-              <div className="field-grid hero-grid">
-                <InputField label="배지 문구" value={data.hero.badge} onChange={(v) => updateSection('hero', { badge: v })} />
-                <InputField label="서브 타이틀" value={data.hero.kicker} onChange={(v) => updateSection('hero', { kicker: v })} />
-                <TextAreaField label="소개 글" value={data.hero.copy} onChange={(v) => updateSection('hero', { copy: v })} rows={4} />
-                <div className="field-group">
-                  <span className="field-group-label">큰 제목</span>
-                  {data.hero.titleLines.map((line, index) => (
-                    <InputField
-                      key={index}
-                      label={`제목 ${index + 1}`}
-                      value={line}
-                      onChange={(v) => {
-                        const next = [...data.hero.titleLines]
-                        next[index] = v
-                        updateSection('hero', { titleLines: next })
-                      }}
-                    />
-                  ))}
-                </div>
-
-                <div className="field-group">
-                  <div className="field-row-head">
-                    <span className="field-group-label">메타 정보</span>
-                    <button className="tiny-button" type="button" onClick={addHeroMeta}>+ 추가</button>
-                  </div>
-                  {data.hero.meta.map((item) => (
-                    <div className="list-item-editor" key={item.id}>
-                      <InputField label="라벨" value={item.label} onChange={(v) => updateArrayItem('hero', 'meta', item.id, { label: v })} />
-                      <InputField label="값" value={item.value} onChange={(v) => updateArrayItem('hero', 'meta', item.id, { value: v })} />
-                      <button className="tiny-button danger" type="button" onClick={() => updateSection('hero', { meta: data.hero.meta.filter((meta) => meta.id !== item.id) })}>
-                        삭제
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="field-group">
-                  <div className="field-row-head">
-                    <span className="field-group-label">버튼</span>
-                    <button className="tiny-button" type="button" onClick={addHeroAction}>+ 추가</button>
-                  </div>
-                  {data.hero.actions.map((item) => (
-                    <div className="list-item-editor" key={item.id}>
-                      <InputField label="버튼명" value={item.label} onChange={(v) => updateArrayItem('hero', 'actions', item.id, { label: v })} />
-                      <InputField label="링크" value={item.href} onChange={(v) => updateArrayItem('hero', 'actions', item.id, { href: v })} />
-                      <SelectField label="스타일" value={item.variant} onChange={(v) => updateArrayItem('hero', 'actions', item.id, { variant: v })}>
-                        <option value="primary">primary</option>
-                        <option value="secondary">secondary</option>
-                      </SelectField>
-                      <button className="tiny-button danger" type="button" onClick={() => updateSection('hero', { actions: data.hero.actions.filter((action) => action.id !== item.id) })}>
-                        삭제
-                      </button>
-                    </div>
-                  ))}
-                </div>
-
-                <div className="field-group">
-                  <span className="field-group-label">사진1</span>
-                  <InputField label="캡션 상단" value={data.hero.portraitCaptionTop} onChange={(v) => updateSection('hero', { portraitCaptionTop: v })} />
-                  <InputField label="캡션 하단" value={data.hero.portraitCaptionBottom} onChange={(v) => updateSection('hero', { portraitCaptionBottom: v })} />
-                  <InputField label="사진 라벨" value={data.hero.portraitLabel} onChange={(v) => updateSection('hero', { portraitLabel: v })} />
-                  <InputField
-                    label="이미지 URL"
-                    value={data.hero.portraitImage}
-                    onChange={(v) => updateSection('hero', { portraitImage: v })}
-                    placeholder="이미지 주소 또는 업로드로 넣기"
-                  />
-                  <label className="field">
-                    <span>이미지 업로드</span>
-                    <input type="file" accept="image/*" onChange={(e) => updateImageFile('hero', 'portraitImage', e.target.files?.[0])} />
-                  </label>
-                </div>
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-interview">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">INTERVIEW</p>
-                  <h2 className="section-title">질문 / 이미지</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={addInterviewQuestion}>+ 질문 추가</button>
-              </div>
-
-              <div className="field-grid">
-                <InputField label="섹션 태그" value={data.interview.tag} onChange={(v) => updateSection('interview', { tag: v })} />
-                <InputField label="이미지 라벨" value={data.interview.portraitLabel} onChange={(v) => updateSection('interview', { portraitLabel: v })} />
-                <InputField label="이미지 URL" value={data.interview.portraitImage} onChange={(v) => updateSection('interview', { portraitImage: v })} />
-                <label className="field">
-                  <span>이미지 업로드</span>
-                  <input type="file" accept="image/*" onChange={(e) => updateImageFile('interview', 'portraitImage', e.target.files?.[0])} />
-                </label>
-              </div>
-
-              <div className="field-group">
-                {data.interview.questions.map((item) => (
-                  <div className="list-item-editor stack" key={item.id}>
-                    <InputField label="질문" value={item.title} onChange={(v) => updateArrayItem('interview', 'questions', item.id, { title: v })} />
-                    <TextAreaField label="답변" value={item.answer} onChange={(v) => updateArrayItem('interview', 'questions', item.id, { answer: v })} rows={3} />
-                    <button className="tiny-button danger align-right" type="button" onClick={() => updateSection('interview', { questions: data.interview.questions.filter((question) => question.id !== item.id) })}>
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-career">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">CAREER</p>
-                  <h2 className="section-title">이력</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={addCareerItem}>+ 항목 추가</button>
-              </div>
-
-              <div className="field-grid">
-                <InputField label="제목" value={data.career.title} onChange={(v) => updateSection('career', { title: v })} />
-                <TextAreaField label="설명" value={data.career.copy} onChange={(v) => updateSection('career', { copy: v })} rows={3} />
-              </div>
-
-              <div className="field-group">
-                {data.career.items.map((item) => (
-                  <div className="list-item-editor stack" key={item.id}>
-                    <InputField label="회사 / 기관명" value={item.title} onChange={(v) => updateArrayItem('career', 'items', item.id, { title: v })} />
-                    <TextAreaField label="설명" value={item.desc} onChange={(v) => updateArrayItem('career', 'items', item.id, { desc: v })} rows={3} />
-                    <TextAreaField
-                      label="불릿 목록(줄바꿈)"
-                      value={item.bullets.join('\n')}
-                      onChange={(v) => updateArrayItem('career', 'items', item.id, { bullets: splitLines(v) })}
-                      rows={3}
-                    />
-                    <button className="tiny-button danger align-right" type="button" onClick={() => updateSection('career', { items: data.career.items.filter((career) => career.id !== item.id) })}>
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-skill">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">SKILL</p>
-                  <h2 className="section-title">스킬 카드</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={addSkillGroup}>+ 그룹 추가</button>
-              </div>
-
-              <div className="field-grid">
-                <InputField label="상단 워드" value={data.skills.railWord} onChange={(v) => updateSection('skills', { railWord: v })} />
-                <InputField label="연도 / 인덱스" value={data.skills.railIndex} onChange={(v) => updateSection('skills', { railIndex: v })} />
-                <InputField label="흘러가는 문구" value={data.skills.marquee} onChange={(v) => updateSection('skills', { marquee: v })} />
-                <InputField label="하단 대형 글자" value={data.skills.bottomWord} onChange={(v) => updateSection('skills', { bottomWord: v })} />
-              </div>
-
-              <div className="field-group">
-                {data.skills.groups.map((group) => (
-                  <div className="list-item-editor stack" key={group.id}>
-                    <div className="field-row-head">
-                      <strong className="group-title">그룹</strong>
-                      <button className="tiny-button" type="button" onClick={() => addSkillItem(group.id)}>+ 스킬 추가</button>
-                    </div>
-                    <InputField label="그룹 제목" value={group.title} onChange={(v) => updateArrayItem('skills', 'groups', group.id, { title: v })} />
-                    {group.items.map((item) => (
-                      <div className="nested-editor" key={item.id}>
-                        <InputField label="스킬명" value={item.name} onChange={(v) => updateNestedArrayItem('skills', 'groups', group.id, 'items', item.id, { name: v })} />
-                        <TextAreaField label="설명" value={item.desc} onChange={(v) => updateNestedArrayItem('skills', 'groups', group.id, 'items', item.id, { desc: v })} rows={2} />
-                        <button className="tiny-button danger align-right" type="button" onClick={() => setData((prev) => ({
-                          ...prev,
-                          skills: {
-                            ...prev.skills,
-                            groups: prev.skills.groups.map((currentGroup) =>
-                              currentGroup.id !== group.id
-                                ? currentGroup
-                                : { ...currentGroup, items: currentGroup.items.filter((skill) => skill.id !== item.id) },
-                            ),
-                          },
-                        }))}>
-                          삭제
-                        </button>
-                      </div>
-                    ))}
-                    <button className="tiny-button danger align-right" type="button" onClick={() => setData((prev) => ({
-                      ...prev,
-                      skills: { ...prev.skills, groups: prev.skills.groups.filter((currentGroup) => currentGroup.id !== group.id) },
-                    }))}>
-                      그룹 삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-projects">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">PROJECTS</p>
-                  <h2 className="section-title">프로젝트</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={addProject}>+ 프로젝트 추가</button>
-              </div>
-
-              <div className="field-grid">
-                <InputField label="제목" value={data.projects.title} onChange={(v) => updateSection('projects', { title: v })} />
-              </div>
-
-              <div className="field-group">
-                {data.projects.items.map((item) => (
-                  <div className="list-item-editor stack" key={item.id}>
-                    <InputField label="프로젝트명" value={item.title} onChange={(v) => updateArrayItem('projects', 'items', item.id, { title: v })} />
-                    <InputField label="분류" value={item.type} onChange={(v) => updateArrayItem('projects', 'items', item.id, { type: v })} />
-                    <InputField label="기술" value={item.tech || ''} onChange={(v) => updateArrayItem('projects', 'items', item.id, { tech: v })} />
-                    <InputField label="언어" value={item.language || ''} onChange={(v) => updateArrayItem('projects', 'items', item.id, { language: v })} />
-                    <TextAreaField label="개요" value={item.overview || item.desc || ''} onChange={(v) => updateArrayItem('projects', 'items', item.id, { overview: v, desc: v })} rows={3} />
-                    <TextAreaField label="목적" value={item.purpose || ''} onChange={(v) => updateArrayItem('projects', 'items', item.id, { purpose: v })} rows={2} />
-                    <InputField label="이미지 URL" value={item.image} onChange={(v) => updateArrayItem('projects', 'items', item.id, { image: v })} />
-                    <label className="field">
-                      <span>이미지 업로드</span>
-                      <input type="file" accept="image/*" onChange={(e) => {
-                        const file = e.target.files?.[0]
-                        if (!file) return
-                        fileToDataUrl(file).then((url) => updateArrayItem('projects', 'items', item.id, { image: url }))
-                      }} />
-                    </label>
-                    <button className="tiny-button danger align-right" type="button" onClick={() => updateSection('projects', { items: data.projects.items.filter((project) => project.id !== item.id) })}>
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-contact">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">CONTACT</p>
-                  <h2 className="section-title">연락처</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={addContactButton}>+ 버튼 추가</button>
-              </div>
-
-              <div className="field-grid">
-                <InputField label="제목" value={data.contact.title} onChange={(v) => updateSection('contact', { title: v })} />
-                <TextAreaField label="설명" value={data.contact.copy} onChange={(v) => updateSection('contact', { copy: v })} rows={3} />
-                <InputField label="이메일" value={data.contact.email} onChange={(v) => updateSection('contact', { email: v })} />
-              </div>
-
-              <div className="field-group">
-                {data.contact.buttons.map((item) => (
-                  <div className="list-item-editor stack" key={item.id}>
-                    <InputField label="버튼명" value={item.label} onChange={(v) => updateArrayItem('contact', 'buttons', item.id, { label: v })} />
-                    <InputField label="링크" value={item.href} onChange={(v) => updateArrayItem('contact', 'buttons', item.id, { href: v })} />
-                    <SelectField label="스타일" value={item.variant} onChange={(v) => updateArrayItem('contact', 'buttons', item.id, { variant: v })}>
-                      <option value="primary">primary</option>
-                      <option value="secondary">secondary</option>
-                    </SelectField>
-                    <button className="tiny-button danger align-right" type="button" onClick={() => updateSection('contact', { buttons: data.contact.buttons.filter((button) => button.id !== item.id) })}>
-                      삭제
-                    </button>
-                  </div>
-                ))}
-              </div>
-            </article>
-
-            <article className="settings-card" id="setting-github">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">GITHUB</p>
-                  <h2 className="section-title">프로젝트 목록 불러오기</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={() => setGithubState((prev) => ({ ...prev, repos: [] }))}>
-                  목록 지우기
-                </button>
-              </div>
-
-              <div className="field-grid github-grid">
-                <InputField
-                  label="깃 아이디"
-                  value={githubState.owner}
-                  onChange={(v) => updateGithubSetting('owner', v)}
-                  placeholder="your-github-id"
-                />
-                <InputField
-                  label="토큰"
-                  type="password"
-                  value={githubState.token}
-                  onChange={(v) => updateGithubSetting('token', v)}
-                  placeholder="ghp_..."
-                />
-              </div>
-
-              <div className="settings-actions">
-                <button className="button primary small" type="button" onClick={fetchGithubRepos} disabled={githubLoading}>
-                  {githubLoading ? '불러오는 중...' : '프로젝트 목록 가져오기'}
-                </button>
-                <span className="settings-action-note">토큰은 이 브라우저에만 저장됩니다.</span>
-              </div>
-
-              {githubError ? <p className="settings-feedback error">{githubError}</p> : null}
-              {githubStatus ? <p className="settings-feedback success">{githubStatus}</p> : null}
-              {githubState.lastFetchedAt ? (
-                <p className="settings-feedback muted">
-                  마지막 불러오기: {new Date(githubState.lastFetchedAt).toLocaleString('ko-KR', { hour12: true })}
-                </p>
-              ) : null}
-
-              <div className="github-repo-list">
-                {githubState.repos.length ? (
-                  githubState.repos.map((repo) => (
-                    <button className="github-repo-card" type="button" key={repo.id} onClick={() => importGithubRepo(repo)}>
-                      <div className="github-repo-head">
-                        <strong>{repo.name}</strong>
-                        <span>{repo.private ? 'private' : 'public'}</span>
-                      </div>
-                      <p>{repo.description || '설명이 없습니다.'}</p>
-                      <div className="github-repo-meta">
-                        <span>언어: {repo.language || '미지정'}</span>
-                        <span>기술: {repo.topics?.length ? repo.topics.join(', ') : repo.language || '미지정'}</span>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="github-repo-empty">
-                    <p>저장소를 불러오면 여기에 목록이 표시됩니다.</p>
-                  </div>
-                )}
-              </div>
-            </article>
-
-            <article className="settings-card">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">DB</p>
-                  <h2 className="section-title">Firebase 연결</h2>
-                </div>
-                <button className="tiny-button" type="button" onClick={() => setDbState((prev) => ({ ...prev, lastLoadedAt: '', lastSavedAt: '' }))}>
-                  기록 지우기
-                </button>
-              </div>
-
-              <div className="field-grid github-grid">
-                <InputField
-                  label="Firestore 컬렉션명"
-                  value={dbState.pagesCollection}
-                  onChange={(v) => updateDbSetting('pagesCollection', v)}
-                  placeholder="portfolio_pages"
-                />
-                <InputField
-                  label="문서 ID"
-                  value={dbState.pageDocId}
-                  onChange={(v) => updateDbSetting('pageDocId', v)}
-                  placeholder="whomi-firebase-main"
-                />
-                <InputField
-                  label="프로젝트 컬렉션명"
-                  value={dbState.projectsCollection}
-                  onChange={(v) => updateDbSetting('projectsCollection', v)}
-                  placeholder="portfolio_projects"
-                />
-              </div>
-
-              <div className="settings-actions">
-                <button className="button primary small" type="button" onClick={fetchDbPortfolio} disabled={dbLoading}>
-                  {dbLoading ? '불러오는 중...' : 'Firebase에서 불러오기'}
-                </button>
-                <button className="button small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
-                  {dbLoading ? '저장 중...' : 'Firebase에 저장하기'}
-                </button>
-                <button className="button small" type="button" onClick={fetchFirebaseProjects} disabled={firebaseProjectsLoading}>
-                  {firebaseProjectsLoading ? '불러오는 중...' : '프로젝트 목록 가져오기'}
-                </button>
-                <span className="settings-action-note">저장 문서는 `payload`와 `settings`로 나뉘어 들어갑니다.</span>
-              </div>
-
-              <p className="settings-action-note">Firestore에는 <code>{`portfolio_pages/{문서ID}`}</code> 문서 안에 포트폴리오 본문은 <code>payload</code>로, 연결 설정은 <code>settings</code>로 들어갑니다. 프로젝트는 <code>portfolio_projects</code> 컬렉션에서 읽습니다.</p>
-
-              {dbError ? <p className="settings-feedback error">{dbError}</p> : null}
-              {dbStatus ? <p className="settings-feedback success">{dbStatus}</p> : null}
-              {dbState.lastLoadedAt ? (
-                <p className="settings-feedback muted">
-                  마지막 불러오기: {new Date(dbState.lastLoadedAt).toLocaleString('ko-KR', { hour12: true })}
-                </p>
-              ) : null}
-              {dbState.lastSavedAt ? (
-                <p className="settings-feedback muted">
-                  마지막 저장: {new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true })}
-                </p>
-              ) : null}
-              {firebaseProjectsError ? <p className="settings-feedback error">{firebaseProjectsError}</p> : null}
-              {firebaseProjectsStatus ? <p className="settings-feedback success">{firebaseProjectsStatus}</p> : null}
-              {firebaseProjects.lastFetchedAt ? (
-                <p className="settings-feedback muted">
-                  프로젝트 목록 마지막 불러오기: {new Date(firebaseProjects.lastFetchedAt).toLocaleString('ko-KR', { hour12: true })}
-                </p>
-              ) : null}
-
-              <div className="firebase-project-list">
-                {firebaseProjects.rows.length ? (
-                  firebaseProjects.rows.map((row) => (
-                    <button className="firebase-project-card" type="button" key={row.firebaseId || row.id} onClick={() => importFirebaseProject(row)}>
-                      <div className="github-repo-head">
-                        <strong>{row.title}</strong>
-                        <span>{row.type}</span>
-                      </div>
-                      <p>{row.overview || '개요가 없습니다.'}</p>
-                      <div className="github-repo-meta">
-                        <span>언어: {row.language || '미지정'}</span>
-                        <span>기술: {row.tech || '미지정'}</span>
-                      </div>
-                    </button>
-                  ))
-                ) : (
-                  <div className="github-repo-empty">
-                    <p>프로젝트 컬렉션을 연결하면 여기에 목록이 표시됩니다.</p>
-                  </div>
-                )}
-              </div>
-            </article>
-
-            <article className="settings-card settings-card-code">
-              <div className="settings-card-head">
-                <div>
-                  <p className="section-tag">EXPORT</p>
-                  <h2 className="section-title">현재 설정 JSON</h2>
-                </div>
-              </div>
-              <pre>{exportJson}</pre>
-            </article>
-          </section>
-        </main>
-      </div>
-  )
+  const renderSettingsPanel = () => null
 
   const renderPortfolioPage = () => (
     <div className="page-shell">
@@ -1657,6 +1236,108 @@ function App() {
             </div>
           </div>
         </section>
+
+        {isSettingMode ? (
+          <section className="section-card hero-inline-editor reveal-up" id="hero-edit">
+            <div className="settings-card-head">
+              <div>
+                <p className="settings-note">인라인 편집</p>
+                <h2 className="section-title">메인 화면을 그대로 보면서 바로 수정</h2>
+              </div>
+              <button className="button primary small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
+                {dbLoading ? '저장 중...' : 'Firebase 저장'}
+              </button>
+            </div>
+
+            <div className="hero-inline-grid">
+              <InputField label="상단 배지" value={data.hero.badge} onChange={(value) => updateSection('hero', { badge: value })} placeholder="배지 문구" />
+              <InputField label="상단 문구" value={data.hero.kicker} onChange={(value) => updateSection('hero', { kicker: value })} placeholder="상단 안내 문구" />
+
+              <div className="hero-inline-title-group">
+                <p className="settings-note">큰 제목</p>
+                <div className="hero-inline-title-lines">
+                  {data.hero.titleLines.map((line, index) => (
+                    <InputField
+                      key={`hero-title-${index}`}
+                      label={`제목 ${index + 1}`}
+                      value={line}
+                      onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
+                      placeholder="제목 줄"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              <TextAreaField label="소개 문구" value={data.hero.copy} onChange={(value) => updateSection('hero', { copy: value })} placeholder="소개 문구" rows={4} />
+
+              <div className="hero-inline-title-group">
+                <p className="settings-note">메타 정보</p>
+                <div className="hero-inline-meta-grid">
+                  {data.hero.meta.map((item) => (
+                    <div className="hero-inline-meta-item" key={item.id}>
+                      <InputField
+                        label={`${item.id} - 라벨`}
+                        value={item.label}
+                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
+                        placeholder="라벨"
+                      />
+                      <InputField
+                        label={`${item.id} - 값`}
+                        value={item.value}
+                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
+                        placeholder="값"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hero-inline-title-group">
+                <p className="settings-note">버튼 링크</p>
+                <div className="hero-inline-meta-grid">
+                  {data.hero.actions.map((action) => (
+                    <div className="hero-inline-meta-item" key={action.id}>
+                      <InputField
+                        label={`${action.id} - 라벨`}
+                        value={action.label}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
+                        placeholder="버튼 라벨"
+                      />
+                      <InputField
+                        label={`${action.id} - 링크`}
+                        value={action.href}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
+                        placeholder="#"
+                      />
+                      <SelectField
+                        label={`${action.id} - 종류`}
+                        value={action.variant}
+                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
+                      >
+                        <option value="primary">primary</option>
+                        <option value="secondary">secondary</option>
+                      </SelectField>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="hero-inline-title-group">
+                <p className="settings-note">사진 영역</p>
+                <div className="hero-inline-meta-grid">
+                  <InputField label="사진 라벨" value={data.hero.portraitLabel} onChange={(value) => updateSection('hero', { portraitLabel: value })} placeholder="사진 라벨" />
+                  <InputField label="캡션 상단" value={data.hero.portraitCaptionTop} onChange={(value) => updateSection('hero', { portraitCaptionTop: value })} placeholder="캡션 상단" />
+                  <InputField label="캡션 하단" value={data.hero.portraitCaptionBottom} onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })} placeholder="캡션 하단" />
+                  <InputField label="이미지 URL" value={data.hero.portraitImage} onChange={(value) => updateSection('hero', { portraitImage: value })} placeholder="이미지 주소" />
+                  <label className="upload-inline">
+                    <span>이미지 업로드</span>
+                    <input type="file" accept="image/*" onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])} />
+                  </label>
+                </div>
+              </div>
+            </div>
+          </section>
+        ) : null}
 
         <section className="section-interview section-grid reveal-up" id="about">
           <div className="section-heading about-panel">
@@ -1799,13 +1480,23 @@ function App() {
     </div>
   )
 
-  return previewMode ? renderPortfolioPage() : (
-    <div className="settings-dual-view">
+  useEffect(() => {
+    if (typeof window === 'undefined') return undefined
+    window.__WHOMI_SAVE__ = saveDbPortfolio
+    return () => {
+      if (window.__WHOMI_SAVE__ === saveDbPortfolio) {
+        delete window.__WHOMI_SAVE__
+      }
+    }
+  }, [saveDbPortfolio])
+
+  return mode === 'setting' ? (
+    <>
       {renderPortfolioPage()}
-      <div className="settings-drawer">
-        {renderSettingsPanel()}
-      </div>
-    </div>
+      {renderSettingsPanel()}
+    </>
+  ) : (
+    renderPortfolioPage()
   )
 }
 

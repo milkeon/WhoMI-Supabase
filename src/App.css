@@ -924,6 +924,31 @@ img {
   padding-bottom: 90px;
 }
 
+.settings-inline-stack {
+  width: min(1280px, calc(100% - 28px));
+  margin: 24px auto 90px;
+}
+
+.settings-inline-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 18px;
+}
+
+.settings-inline-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.settings-content {
+  display: grid;
+  gap: 18px;
+}
+
 .settings-dual-view {
   position: relative;
   padding-right: min(42vw, 760px);
@@ -1051,6 +1076,52 @@ img {
   background: rgba(255, 120, 120, 0.16);
   color: #ffdede;
   border: 1px solid rgba(255, 120, 120, 0.28);
+}
+
+.hero-inline-editor {
+  margin-top: 26px;
+}
+
+.hero-inline-grid {
+  display: grid;
+  gap: 14px;
+}
+
+.hero-inline-title-group {
+  display: grid;
+  gap: 12px;
+}
+
+.hero-inline-title-lines,
+.hero-inline-meta-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.hero-inline-meta-item {
+  display: grid;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.upload-inline {
+  display: grid;
+  gap: 8px;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px dashed rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.03);
+  color: rgba(243, 241, 235, 0.78);
+  align-content: start;
+}
+
+.upload-inline input[type='file'] {
+  width: 100%;
+  color: rgba(243, 241, 235, 0.9);
 }
 
 .field-grid {
