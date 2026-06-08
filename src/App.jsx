@@ -50,6 +50,14 @@ const getFirebaseDb = () => getFirestore(getFirebaseApp())
 
 const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const clone = (value) => JSON.parse(JSON.stringify(value))
+const fileToDataUrl = (file) =>
+  new Promise((resolve, reject) => {
+    const reader = new FileReader()
+    reader.onload = () => resolve(String(reader.result || ''))
+    reader.onerror = () => reject(new Error('이미지 파일을 읽지 못했습니다.'))
+    reader.readAsDataURL(file)
+  })
+
 const normalizeText = (value, fallback = '') => {
   const text = String(value || '').trim()
   return text || fallback
@@ -511,6 +519,26 @@ function EditableField({
   )
 }
 
+function ImageUploadControl({ buttonLabel, className = '', onUpload }) {
+  const handleChange = async (event) => {
+    const file = event.target.files?.[0]
+    event.target.value = ''
+
+    if (!file) {
+      return
+    }
+
+    await onUpload(file)
+  }
+
+  return (
+    <label className={`image-upload-control ${className}`.trim()}>
+      <span className="button secondary tiny image-upload-trigger">{buttonLabel}</span>
+      <input accept="image/*" className="image-upload-input" type="file" onChange={handleChange} />
+    </label>
+  )
+}
+
 function App() {
   const [mode, setMode] = useState(getModeFromHash)
   const [data, setData] = useState(loadStoredData)
@@ -826,7 +854,7 @@ function App() {
     }
   }
 
-  const saveDbPortfolio = useCallback(async () => {
+  const saveDbPortfolio = useCallback(async (snapshotData = data) => {
     const pagesCollection = dbState.pagesCollection.trim()
     const pageDocId = dbState.pageDocId.trim()
 
@@ -842,7 +870,7 @@ function App() {
       await setDoc(
         doc(db, pagesCollection, pageDocId),
         {
-          payload: clone(data),
+          payload: clone(snapshotData),
           settings: {
             pagesCollection,
             pageDocId,
@@ -858,6 +886,59 @@ function App() {
       setDbError(error instanceof Error ? error.message : 'Firebase에 저장하지 못했습니다.')
     }
   }, [data, dbState])
+
+  const uploadHeroPortraitImage = useCallback(
+    async (file) => {
+      const image = await fileToDataUrl(file)
+      const nextData = {
+        ...data,
+        hero: {
+          ...data.hero,
+          portraitImage: image,
+        },
+      }
+
+      setData(nextData)
+      await saveDbPortfolio(nextData)
+    },
+    [data, saveDbPortfolio],
+  )
+
+  const uploadInterviewPortraitImage = useCallback(
+    async (file) => {
+      const image = await fileToDataUrl(file)
+      const nextData = {
+        ...data,
+        interview: {
+          ...data.interview,
+          portraitImage: image,
+        },
+      }
+
+      setData(nextData)
+      await saveDbPortfolio(nextData)
+    },
+    [data, saveDbPortfolio],
+  )
+
+  const uploadProjectImage = useCallback(
+    async (projectId, file) => {
+      const image = await fileToDataUrl(file)
+      const nextData = {
+        ...data,
+        projects: {
+          ...data.projects,
+          items: data.projects.items.map((project) =>
+            project.id === projectId ? { ...project, image } : project,
+          ),
+        },
+      }
+
+      setData(nextData)
+      await saveDbPortfolio(nextData)
+    },
+    [data, saveDbPortfolio],
+  )
 
   const fetchFirebaseProjects = async () => {
     const projectsCollection = dbState.projectsCollection.trim()
@@ -1006,6 +1087,15 @@ function App() {
       },
     }))
 
+  const removeCareerItem = (itemId) =>
+    setData((prev) => ({
+      ...prev,
+      career: {
+        ...prev.career,
+        items: prev.career.items.filter((item) => item.id !== itemId),
+      },
+    }))
+
   const addSkillGroup = () =>
     setData((prev) => ({
       ...prev,
@@ -1128,7 +1218,6 @@ function App() {
           <a href="#career">이력</a>
           <a href="#skill">기술</a>
           <a href="#projects">프로젝트</a>
-          <a href="#setting">설정</a>
         </nav>
       </header>
 
@@ -1279,6 +1368,13 @@ function App() {
                       <div className="portrait-glow portrait-glow-2" />
                     </>
                   )}
+                  {isSettingMode ? (
+                    <ImageUploadControl
+                      buttonLabel={data.hero.portraitImage ? '이미지 변경' : '이미지 추가'}
+                      className="image-upload-overlay"
+                      onUpload={uploadHeroPortraitImage}
+                    />
+                  ) : null}
                 </div>
                 <div className="portrait-caption">
                   {edit({
@@ -1365,21 +1461,35 @@ function App() {
                 })}
               </div>
             )}
+            {isSettingMode ? (
+              <ImageUploadControl
+                buttonLabel={data.interview.portraitImage ? '이미지 변경' : '이미지 추가'}
+                className="image-upload-overlay"
+                onUpload={uploadInterviewPortraitImage}
+              />
+            ) : null}
           </div>
         </section>
 
         <section className="section-grid section-career reveal-up" id="career">
           <div className="section-heading">
-            {edit({
-              wrapperTag: 'div',
-              displayTag: 'p',
-              displayClassName: 'section-tag',
-              value: data.career.tag,
-              placeholder: '섹션 태그',
-              className: 'section-inline-editor',
-              inputClassName: 'section-inline-input',
-              onChange: (value) => updateSection('career', { tag: value }),
-            })}
+            <div className="section-heading-row">
+              {edit({
+                wrapperTag: 'div',
+                displayTag: 'p',
+                displayClassName: 'section-tag',
+                value: data.career.tag,
+                placeholder: '섹션 태그',
+                className: 'section-inline-editor',
+                inputClassName: 'section-inline-input',
+                onChange: (value) => updateSection('career', { tag: value }),
+              })}
+              {isSettingMode ? (
+                <button className="button secondary small" type="button" onClick={addCareerItem}>
+                  경력 추가
+                </button>
+              ) : null}
+            </div>
             {edit({
               wrapperTag: 'div',
               displayTag: 'h2',
@@ -1407,6 +1517,13 @@ function App() {
           <div className="career-stack">
             {data.career.items.map((item) => (
               <article className="career-card reveal-up" key={item.id}>
+                {isSettingMode ? (
+                  <div className="career-card-actions">
+                    <button className="button danger small" type="button" onClick={() => removeCareerItem(item.id)}>
+                      삭제
+                    </button>
+                  </div>
+                ) : null}
                 {edit({
                   wrapperTag: 'div',
                   displayTag: 'h3',
@@ -1582,6 +1699,13 @@ function App() {
                 <div className="project-media">
                   <span className="project-media-tag">/</span>
                   {project.image ? <img className="project-image" src={project.image} alt={project.title} /> : <div className="project-image project-image-empty" aria-hidden="true" />}
+                  {isSettingMode ? (
+                    <ImageUploadControl
+                      buttonLabel={project.image ? '이미지 변경' : '이미지 추가'}
+                      className="image-upload-overlay"
+                      onUpload={(file) => uploadProjectImage(project.id, file)}
+                    />
+                  ) : null}
                 </div>
                 <div className="project-content">
                   {edit({
