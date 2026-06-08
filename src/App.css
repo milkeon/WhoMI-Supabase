@@ -924,6 +924,50 @@ img {
   padding-bottom: 90px;
 }
 
+.settings-dual-view {
+  position: relative;
+  padding-right: min(42vw, 760px);
+}
+
+.settings-drawer {
+  position: fixed;
+  top: 14px;
+  right: 14px;
+  bottom: 14px;
+  width: min(42vw, 760px);
+  min-width: 420px;
+  z-index: 40;
+  overflow: auto;
+  border-radius: 28px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(6, 8, 12, 0.94);
+  box-shadow: 0 30px 90px rgba(0, 0, 0, 0.45);
+  backdrop-filter: blur(18px);
+}
+
+.settings-drawer .page-shell {
+  width: 100%;
+  margin: 0;
+  padding: 18px 18px 34px;
+}
+
+.settings-drawer .page-shell::before,
+.settings-drawer .page-shell::after {
+  display: none;
+}
+
+.settings-drawer .topbar {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  padding-top: 0;
+  margin-bottom: 18px;
+}
+
+.settings-drawer .settings-layout {
+  grid-template-columns: 1fr;
+}
+
 .settings-layout {
   display: grid;
   grid-template-columns: 220px minmax(0, 1fr);
@@ -1298,6 +1342,21 @@ img {
   .settings-side {
     position: relative;
     top: 0;
+  }
+
+  .settings-dual-view {
+    padding-right: 0;
+  }
+
+  .settings-drawer {
+    position: static;
+    top: auto;
+    right: auto;
+    bottom: auto;
+    width: 100%;
+    min-width: 0;
+    max-width: none;
+    margin: 16px 0 0;
   }
 }
 

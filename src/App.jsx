@@ -1099,8 +1099,7 @@ function App() {
 
   const exportJson = useMemo(() => JSON.stringify(data, null, 2), [data])
 
-  if (!previewMode) {
-    return (
+  const renderSettingsPanel = () => (
       <div className="page-shell settings-page">
         <header className="topbar settings-topbar">
           <a className="brand" href="#home" aria-label="홈으로 이동">
@@ -1580,10 +1579,9 @@ function App() {
           </section>
         </main>
       </div>
-    )
-  }
+  )
 
-  return (
+  const renderPortfolioPage = () => (
     <div className="page-shell">
       <header className="topbar reveal-up">
         <a className="brand" href="#home" aria-label="홈으로 이동">
@@ -1798,6 +1796,15 @@ function App() {
           </div>
         </section>
       </main>
+    </div>
+  )
+
+  return previewMode ? renderPortfolioPage() : (
+    <div className="settings-dual-view">
+      {renderPortfolioPage()}
+      <div className="settings-drawer">
+        {renderSettingsPanel()}
+      </div>
     </div>
   )
 }
