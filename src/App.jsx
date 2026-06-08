@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { getApp, getApps, initializeApp } from 'firebase/app'
 import { collection, doc, getDoc, getDocs, getFirestore, orderBy, query, setDoc } from 'firebase/firestore'
 import gsap from 'gsap'
@@ -562,6 +562,8 @@ function App() {
   const [firebaseProjectsLoading, setFirebaseProjectsLoading] = useState(false)
   const [firebaseProjectsError, setFirebaseProjectsError] = useState('')
   const [firebaseProjectsStatus, setFirebaseProjectsStatus] = useState('')
+  const [firebaseHydrated, setFirebaseHydrated] = useState(false)
+  const firebaseAutoSaveTimerRef = useRef(null)
   const savedAt = dbState.lastSavedAt ? new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true }) : ''
   const isSettingMode = mode === 'setting'
   useEffect(() => {
@@ -782,30 +784,58 @@ function App() {
         headers.Authorization = `Bearer ${token}`
       }
 
-      const endpoint = owner
-        ? `https://api.github.com/users/${encodeURIComponent(owner)}/repos?per_page=100&sort=updated&type=owner`
-        : 'https://api.github.com/user/repos?per_page=100&sort=updated&type=owner'
+      const normalized = []
+      const seen = new Set()
+      let page = 1
 
-      const response = await fetch(endpoint, { headers })
-      if (!response.ok) {
-        throw new Error(`GitHub API 요청 실패 (${response.status})`)
+      while (true) {
+        const endpoint = token
+          ? `https://api.github.com/user/repos?per_page=100&page=${page}&sort=updated&visibility=all&affiliation=owner,collaborator,organization_member`
+          : `https://api.github.com/users/${encodeURIComponent(owner)}/repos?per_page=100&page=${page}&sort=updated&type=owner`
+
+        const response = await fetch(endpoint, { headers })
+        if (!response.ok) {
+          throw new Error(`GitHub API 요청 실패 (${response.status})`)
+        }
+
+        const repos = await response.json()
+        if (!Array.isArray(repos) || repos.length === 0) {
+          break
+        }
+
+        repos.forEach((repo) => {
+          if (!repo || !repo.name) {
+            return
+          }
+
+          if (owner && token && repo.owner?.login && repo.owner.login.toLowerCase() !== owner.toLowerCase()) {
+            return
+          }
+
+          const key = repo.full_name || `${repo.owner?.login || owner}/${repo.name}`
+          if (seen.has(key)) {
+            return
+          }
+
+          seen.add(key)
+          normalized.push({
+            id: repo.id,
+            name: repo.name,
+            fullName: key,
+            description: repo.description || '',
+            language: repo.language || '',
+            topics: Array.isArray(repo.topics) ? repo.topics : [],
+            html_url: repo.html_url,
+            private: Boolean(repo.private),
+          })
+        })
+
+        if (repos.length < 100) {
+          break
+        }
+
+        page += 1
       }
-
-      const repos = await response.json()
-      const normalized = Array.isArray(repos)
-        ? repos
-            .filter((repo) => repo && repo.name)
-            .map((repo) => ({
-              id: repo.id,
-              name: repo.name,
-              fullName: repo.full_name || `${repo.owner?.login || owner}/${repo.name}`,
-              description: repo.description || '',
-              language: repo.language || '',
-              topics: Array.isArray(repo.topics) ? repo.topics : [],
-              html_url: repo.html_url,
-              private: Boolean(repo.private),
-            }))
-        : []
 
       setGithubState((prev) => ({
         ...prev,
@@ -895,6 +925,68 @@ function App() {
       setDbError(error instanceof Error ? error.message : 'Firebase에 저장하지 못했습니다.')
     }
   }, [data, dbState])
+
+  /* eslint-disable react-hooks/exhaustive-deps */
+  useEffect(() => {
+    let cancelled = false
+
+    const hydrate = async () => {
+      if (getFirebaseConfigError()) {
+        setFirebaseHydrated(true)
+        return
+      }
+
+      if (!dbState.pagesCollection.trim() || !dbState.pageDocId.trim()) {
+        setFirebaseHydrated(true)
+        return
+      }
+
+      try {
+        await fetchDbPortfolio()
+      } catch {
+        // 초기 동기화 실패는 로컬 상태를 유지합니다.
+      }
+
+      if (!cancelled) {
+        setFirebaseHydrated(true)
+      }
+    }
+
+    hydrate()
+
+    return () => {
+      cancelled = true
+    }
+  }, [])
+  /* eslint-enable react-hooks/exhaustive-deps */
+
+  useEffect(() => {
+    if (!firebaseHydrated) {
+      return undefined
+    }
+
+    if (getFirebaseConfigError()) {
+      return undefined
+    }
+
+    if (!dbState.pagesCollection.trim() || !dbState.pageDocId.trim()) {
+      return undefined
+    }
+
+    if (firebaseAutoSaveTimerRef.current) {
+      window.clearTimeout(firebaseAutoSaveTimerRef.current)
+    }
+
+    firebaseAutoSaveTimerRef.current = window.setTimeout(() => {
+      void saveDbPortfolio(data)
+    }, 900)
+
+    return () => {
+      if (firebaseAutoSaveTimerRef.current) {
+        window.clearTimeout(firebaseAutoSaveTimerRef.current)
+      }
+    }
+  }, [data, dbState.pageDocId, dbState.pagesCollection, firebaseHydrated, saveDbPortfolio])
 
   const uploadHeroPortraitImage = useCallback(
     async (file) => {
