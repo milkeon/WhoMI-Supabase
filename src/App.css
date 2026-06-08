@@ -1175,8 +1175,26 @@ img {
   background: rgba(0, 0, 0, 0.18);
 }
 
+.editable-field {
+  position: relative;
+  display: inline-grid;
+  gap: 8px;
+  min-width: 0;
+  padding: 12px 52px 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  background: rgba(0, 0, 0, 0.18);
+  width: fit-content;
+}
+
+.editable-field.is-editing {
+  background: rgba(0, 0, 0, 0.24);
+}
+
 .inline-span-editor input,
-.inline-span-editor textarea {
+.inline-span-editor textarea,
+.editable-field input,
+.editable-field textarea {
   width: 100%;
   min-width: 180px;
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -1187,7 +1205,8 @@ img {
   outline: none;
 }
 
-.inline-span-editor textarea {
+.inline-span-editor textarea,
+.editable-field textarea {
   min-height: 110px;
   resize: vertical;
 }
@@ -1197,12 +1216,49 @@ img {
   cursor: pointer;
 }
 
-.inline-span-button {
+.inline-span-button,
+.editable-field-button {
   position: absolute;
   top: 10px;
   right: 10px;
   flex: 0 0 auto;
 }
+
+.hero-inline-editor,
+.section-inline-editor,
+.card-inline-editor,
+.rail-inline-editor,
+.hero-action-editor,
+.contact-button-editor {
+  width: 100%;
+}
+
+.hero-title-editor,
+.meta-chip-editor,
+.portrait-label-editor,
+.portrait-caption-editor {
+  width: fit-content;
+}
+
+.hero-action-item .editable-field,
+.contact-button-editor .editable-field {
+  width: 100%;
+}
+
+.contact-button-editor {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hero-action-item.is-editing,
+.contact-button-editor.is-editing {
+  background: rgba(255, 255, 255, 0.045);
+}
+
 
 .compact-row-editor {
   position: relative;

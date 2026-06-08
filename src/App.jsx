@@ -50,14 +50,6 @@ const getFirebaseDb = () => getFirestore(getFirebaseApp())
 
 const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const clone = (value) => JSON.parse(JSON.stringify(value))
-const fileToDataUrl = (file) =>
-  new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => resolve(String(reader.result || ''))
-    reader.onerror = reject
-    reader.readAsDataURL(file)
-  })
-
 const normalizeText = (value, fallback = '') => {
   const text = String(value || '').trim()
   return text || fallback
@@ -447,94 +439,75 @@ function inlinePreviewText(value, placeholder, type) {
   return text || placeholder || '비어 있음'
 }
 
-function SelectField({ label, value, onChange, children }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const preview = inlinePreviewText(value, '', 'text')
-
-  return (
-    <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
-      <div className="field-row-head">
-        <span>{label}</span>
-        <button
-          className="tiny-button"
-          type="button"
-          onClick={() => {
-            if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
-              window.__WHOMI_SAVE__()
-            }
-            setIsEditing((prev) => !prev)
-          }}
-        >
-          {isEditing ? '저장' : '수정'}
-        </button>
-      </div>
-      {isEditing ? (
-        <select autoFocus value={value} onChange={(e) => onChange(e.target.value)}>{children}</select>
-      ) : (
-        <button className="inline-field-preview" type="button" onClick={() => setIsEditing(true)}>
-          <strong>{preview}</strong>
-          <span>클릭해서 수정</span>
-        </button>
-      )}
-    </div>
-  )
-}
-
-function CompactRowEditor({ label, value, onChange, placeholder, className = '' }) {
-  const [isEditing, setIsEditing] = useState(false)
-  const handleToggle = () => {
-    if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
-      window.__WHOMI_SAVE__()
-    }
-    setIsEditing((prev) => !prev)
-  }
-
-  return (
-    <div className={`compact-row-editor ${className}${isEditing ? ' is-editing' : ''}`}>
-      <div className="compact-row-shell">
-        <span className="compact-row-label">{label}</span>
-        {isEditing ? (
-          <input autoFocus type="text" value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-        ) : (
-          <button className="compact-row-value" type="button" onClick={handleToggle}>
-            <strong>{inlinePreviewText(value, placeholder, 'text')}</strong>
-          </button>
-        )}
-      </div>
-      <button className="tiny-button inline-span-button" type="button" onClick={handleToggle}>
-        {isEditing ? '저장' : '수정'}
-      </button>
-    </div>
-  )
-}
-
-function InlineSpanEditor({ value, onChange, placeholder, className = '', textClassName = '', multiline = false, rows = 3, type = 'text' }) {
+function EditableField({
+  enabled = false,
+  wrapperTag = 'div',
+  displayTag = 'span',
+  displayProps = {},
+  value,
+  onChange,
+  onSave = null,
+  placeholder = '',
+  multiline = false,
+  rows = 3,
+  type = 'text',
+  className = '',
+  displayClassName = '',
+  inputClassName = '',
+  buttonClassName = '',
+  editLabel = '수정',
+  saveLabel = '저장',
+}) {
   const [isEditing, setIsEditing] = useState(false)
   const text = inlinePreviewText(value, placeholder, type)
-  const handleToggle = () => {
-    if (isEditing && typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
-      window.__WHOMI_SAVE__()
+  const WrapperTag = wrapperTag
+  const PreviewTag = displayTag
+
+  const handleToggle = async () => {
+    if (!enabled) return
+    if (isEditing) {
+      if (typeof onSave === 'function') {
+        await onSave()
+      } else if (typeof window !== 'undefined' && typeof window.__WHOMI_SAVE__ === 'function') {
+        await window.__WHOMI_SAVE__()
+      }
     }
     setIsEditing((prev) => !prev)
   }
 
+  if (!enabled) {
+    return <PreviewTag className={displayClassName} {...displayProps}>{text}</PreviewTag>
+  }
+
   return (
-    <span className={`inline-span-editor ${className}${isEditing ? ' is-editing' : ''}`}>
+    <WrapperTag className={`editable-field ${className}${isEditing ? ' is-editing' : ''}`}>
       {isEditing ? (
         multiline ? (
-          <textarea autoFocus rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+          <textarea
+            autoFocus
+            className={inputClassName}
+            rows={rows}
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+          />
         ) : (
-          <input autoFocus type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+          <input
+            autoFocus
+            className={inputClassName}
+            type={type}
+            value={value}
+            placeholder={placeholder}
+            onChange={(e) => onChange(e.target.value)}
+          />
         )
       ) : (
-        <span className={`inline-span-text ${textClassName}`} onClick={handleToggle} role="button" tabIndex={0}>
-          {text}
-        </span>
+        <PreviewTag className={displayClassName} {...displayProps}>{text}</PreviewTag>
       )}
-      <button className="tiny-button inline-span-button" type="button" onClick={handleToggle}>
-        {isEditing ? '저장' : '수정'}
+      <button className={`tiny-button editable-field-button ${buttonClassName}`.trim()} type="button" onClick={handleToggle}>
+        {isEditing ? saveLabel : editLabel}
       </button>
-    </span>
+    </WrapperTag>
   )
 }
 
@@ -546,7 +519,6 @@ function App() {
   const [githubError, setGithubError] = useState('')
   const [githubStatus, setGithubStatus] = useState('')
   const [dbState, setDbState] = useState(loadStoredDbState)
-  const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState('')
   const [dbStatus, setDbStatus] = useState('')
   const [firebaseProjects, setFirebaseProjects] = useState({ rows: [], lastFetchedAt: '' })
@@ -728,12 +700,6 @@ function App() {
     }))
   }
 
-  const updateImageFile = async (section, key, file) => {
-    if (!file) return
-    const url = await fileToDataUrl(file)
-    setData((prev) => ({ ...prev, [section]: { ...prev[section], [key]: url } }))
-  }
-
   const updateGithubSetting = (key, value) => {
     setGithubState((prev) => ({ ...prev, [key]: value }))
   }
@@ -826,7 +792,6 @@ function App() {
       return
     }
 
-    setDbLoading(true)
     clearDbResults()
 
     try {
@@ -858,8 +823,6 @@ function App() {
       setDbStatus('Firebase에서 포트폴리오를 불러왔습니다.')
     } catch (error) {
       setDbError(error instanceof Error ? error.message : 'Firebase에서 불러오지 못했습니다.')
-    } finally {
-      setDbLoading(false)
     }
   }
 
@@ -872,7 +835,6 @@ function App() {
       return
     }
 
-    setDbLoading(true)
     clearDbResults()
 
     try {
@@ -894,8 +856,6 @@ function App() {
       setDbStatus('현재 포트폴리오를 Firebase에 저장했습니다.')
     } catch (error) {
       setDbError(error instanceof Error ? error.message : 'Firebase에 저장하지 못했습니다.')
-    } finally {
-      setDbLoading(false)
     }
   }, [data, dbState])
 
@@ -1150,6 +1110,7 @@ function App() {
     ]
   }
 
+  const edit = (props) => <EditableField enabled={isSettingMode} onSave={saveDbPortfolio} {...props} />
   const renderSettingsPanel = () => null
 
   const renderPortfolioPage = () => (
@@ -1174,139 +1135,120 @@ function App() {
       <main>
         <section className="hero reveal-up" id="home">
           <div className="hero-copy-column">
-            <div className="hero-badge-row">
-              {isSettingMode ? (
-                <InlineSpanEditor
-                  className="hero-badge-inline"
-                  textClassName="hero-badge"
-                  value={data.hero.badge}
-                  onChange={(value) => updateSection('hero', { badge: value })}
-                  placeholder="배지 문구"
-                />
-              ) : (
-                <p className="hero-badge">{data.hero.badge}</p>
-              )}
-            </div>
-
-            <div className="hero-kicker-row">
-              {isSettingMode ? (
-                <InlineSpanEditor
-                  className="hero-kicker-inline"
-                  textClassName="hero-kicker"
-                  value={data.hero.kicker}
-                  onChange={(value) => updateSection('hero', { kicker: value })}
-                  placeholder="상단 안내 문구"
-                />
-              ) : (
-                <p className="hero-kicker">{data.hero.kicker}</p>
-              )}
-            </div>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'hero-badge',
+              value: data.hero.badge,
+              placeholder: '배지 문구',
+              className: 'hero-inline-editor hero-badge-editor',
+              inputClassName: 'hero-inline-input',
+              onChange: (value) => updateSection('hero', { badge: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'hero-kicker',
+              value: data.hero.kicker,
+              placeholder: '상단 소개 문구',
+              className: 'hero-inline-editor hero-kicker-editor',
+              inputClassName: 'hero-inline-input',
+              onChange: (value) => updateSection('hero', { kicker: value }),
+            })}
 
             <h1 className="hero-title" aria-label={data.hero.titleLines.join(' ')}>
-              {data.hero.titleLines.map((line, index) =>
-                isSettingMode ? (
-                  <InlineSpanEditor
-                    key={`hero-title-${index}`}
-                    className="hero-title-line-editor"
-                    textClassName="hero-title-line"
-                    value={line}
-                    onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
-                    placeholder="제목 줄"
-                  />
-                ) : (
-                  <span className="hero-title-line" key={`${line}-${index}`}>
-                    {line}
-                  </span>
-                ),
-              )}
+              {data.hero.titleLines.map((line, index) => (
+                <span className="hero-title-line" key={`${line}-${index}`}>
+                  {edit({
+                    wrapperTag: 'span',
+                    displayTag: 'span',
+                    displayClassName: 'hero-title-line',
+                    value: line,
+                    placeholder: '제목',
+                    className: 'hero-title-editor',
+                    inputClassName: 'hero-inline-input hero-title-input',
+                    onChange: (value) =>
+                      setData((prev) => ({
+                        ...prev,
+                        hero: {
+                          ...prev.hero,
+                          titleLines: prev.hero.titleLines.map((current, currentIndex) =>
+                            currentIndex === index ? value : current,
+                          ),
+                        },
+                      })),
+                  })}
+                </span>
+              ))}
             </h1>
 
-            <div className="hero-copy-row">
-              {isSettingMode ? (
-                <InlineSpanEditor
-                  className="hero-copy-inline"
-                  textClassName="hero-copy"
-                  multiline
-                  rows={4}
-                  value={data.hero.copy}
-                  onChange={(value) => updateSection('hero', { copy: value })}
-                  placeholder="소개 문구"
-                />
-              ) : (
-                <p className="hero-copy">{data.hero.copy}</p>
-              )}
-            </div>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'hero-copy',
+              value: data.hero.copy,
+              placeholder: '소개 문구',
+              multiline: true,
+              rows: 4,
+              className: 'hero-copy-editor',
+              inputClassName: 'hero-inline-input hero-copy-input',
+              onChange: (value) => updateSection('hero', { copy: value }),
+            })}
 
             <div className="hero-meta">
               {data.hero.meta.map((item) => (
                 <div className="meta-chip" key={item.id}>
-                  <span>
-                    {isSettingMode ? (
-                      <InlineSpanEditor
-                        className="meta-label-inline"
-                        textClassName="meta-label"
-                        value={item.label}
-                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
-                        placeholder="라벨"
-                      />
-                    ) : (
-                      item.label
-                    )}
-                  </span>
-                  <strong>
-                    {isSettingMode ? (
-                      <InlineSpanEditor
-                        className="meta-value-inline"
-                        textClassName="meta-value"
-                        value={item.value}
-                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
-                        placeholder="값"
-                      />
-                    ) : (
-                      item.value
-                    )}
-                  </strong>
+                  {edit({
+                    wrapperTag: 'span',
+                    displayTag: 'span',
+                    displayClassName: 'meta-chip-label',
+                    value: item.label,
+                    placeholder: '항목명',
+                    className: 'meta-chip-editor meta-chip-label-editor',
+                    inputClassName: 'hero-inline-input meta-chip-input',
+                    onChange: (value) => updateArrayItem('hero', 'meta', item.id, { label: value }),
+                  })}
+                  {edit({
+                    wrapperTag: 'span',
+                    displayTag: 'strong',
+                    displayClassName: 'meta-chip-value',
+                    value: item.value,
+                    placeholder: '내용',
+                    className: 'meta-chip-editor meta-chip-value-editor',
+                    inputClassName: 'hero-inline-input meta-chip-input',
+                    onChange: (value) => updateArrayItem('hero', 'meta', item.id, { value }),
+                  })}
                 </div>
               ))}
             </div>
 
             <div className="hero-actions">
               {data.hero.actions.map((action) => (
-                <div className={`hero-action-item${isSettingMode ? ' is-editing' : ''}`} key={action.id}>
-                  <div className="hero-action-preview">
-                    <a className={`button ${action.variant === 'primary' ? 'primary' : 'secondary'}`} href={action.href}>
-                      {action.label}
-                    </a>
-                    {isSettingMode ? (
-                      <button className="tiny-button hero-action-save" type="button" onClick={() => saveDbPortfolio()} disabled={dbLoading}>
-                        {dbLoading ? '저장 중...' : '저장'}
-                      </button>
-                    ) : null}
-                  </div>
-                  {isSettingMode ? (
-                    <div className="hero-action-edit hero-action-edit-overlay">
-                      <CompactRowEditor
-                        label="라벨"
-                        value={action.label}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
-                        placeholder="버튼 라벨"
-                      />
-                      <CompactRowEditor
-                        label="링크"
-                        value={action.href}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
-                        placeholder="#"
-                      />
-                      <SelectField
-                        label="종류"
-                        value={action.variant}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
-                      >
-                        <option value="primary">primary</option>
-                        <option value="secondary">secondary</option>
-                      </SelectField>
-                    </div>
-                  ) : null}
+                <div className="hero-action-item" key={action.id}>
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'a',
+                    displayProps: {
+                      href: action.href,
+                      className: `button ${action.variant === 'primary' ? 'primary' : 'secondary'}`,
+                    },
+                    displayClassName: '',
+                    value: action.label,
+                    placeholder: '버튼명',
+                    className: 'hero-action-editor hero-action-label-editor',
+                    inputClassName: 'hero-inline-input hero-action-input',
+                    onChange: (value) => updateArrayItem('hero', 'actions', action.id, { label: value }),
+                  })}
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'span',
+                    displayClassName: 'hero-action-href',
+                    value: action.href,
+                    placeholder: '#링크',
+                    className: 'hero-action-editor hero-action-href-editor',
+                    inputClassName: 'hero-inline-input hero-action-input',
+                    onChange: (value) => updateArrayItem('hero', 'actions', action.id, { href: value }),
+                  })}
                 </div>
               ))}
             </div>
@@ -1317,7 +1259,16 @@ function App() {
             <div className="hero-orb hero-orb-2" />
             <div className="portrait-frame">
               <div className="portrait-photo">
-                <span className="portrait-label">{data.hero.portraitLabel}</span>
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'span',
+                  displayClassName: 'portrait-label',
+                  value: data.hero.portraitLabel,
+                  placeholder: '사진 라벨',
+                  className: 'portrait-label-editor',
+                  inputClassName: 'hero-inline-input portrait-input',
+                  onChange: (value) => updateSection('hero', { portraitLabel: value }),
+                })}
                 <div className="portrait-art" aria-hidden="true">
                   {data.hero.portraitImage ? (
                     <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
@@ -1330,51 +1281,27 @@ function App() {
                   )}
                 </div>
                 <div className="portrait-caption">
-                  <span>{data.hero.portraitCaptionTop}</span>
-                  <strong>{data.hero.portraitCaptionBottom}</strong>
+                  {edit({
+                    wrapperTag: 'span',
+                    displayTag: 'span',
+                    displayClassName: 'portrait-caption-top',
+                    value: data.hero.portraitCaptionTop,
+                    placeholder: '상단 캡션',
+                    className: 'portrait-caption-editor',
+                    inputClassName: 'hero-inline-input portrait-input',
+                    onChange: (value) => updateSection('hero', { portraitCaptionTop: value }),
+                  })}
+                  {edit({
+                    wrapperTag: 'strong',
+                    displayTag: 'strong',
+                    displayClassName: 'portrait-caption-bottom',
+                    value: data.hero.portraitCaptionBottom,
+                    placeholder: '하단 캡션',
+                    className: 'portrait-caption-editor',
+                    inputClassName: 'hero-inline-input portrait-input',
+                    onChange: (value) => updateSection('hero', { portraitCaptionBottom: value }),
+                  })}
                 </div>
-
-                {isSettingMode ? (
-                  <div className="portrait-edit-strip portrait-edit-overlay">
-                    <CompactRowEditor
-                      label="사진 라벨"
-                      value={data.hero.portraitLabel}
-                      onChange={(value) => updateSection('hero', { portraitLabel: value })}
-                      placeholder="사진 라벨"
-                    />
-                    <CompactRowEditor
-                      label="캡션 상단"
-                      value={data.hero.portraitCaptionTop}
-                      onChange={(value) => updateSection('hero', { portraitCaptionTop: value })}
-                      placeholder="캡션 상단"
-                    />
-                    <CompactRowEditor
-                      label="캡션 하단"
-                      value={data.hero.portraitCaptionBottom}
-                      onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })}
-                      placeholder="캡션 하단"
-                    />
-                    <div className="compact-inline-editor portrait-image-inline">
-                      <div className="compact-inline-head">
-                        <span>이미지</span>
-                        <button className="tiny-button" type="button" onClick={() => saveDbPortfolio()} disabled={dbLoading}>
-                          {dbLoading ? '저장 중...' : '저장'}
-                        </button>
-                      </div>
-                      <input
-                        type="file"
-                        accept="image/*"
-                        onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])}
-                      />
-                      <CompactRowEditor
-                        label="이미지 URL"
-                        value={data.hero.portraitImage}
-                        onChange={(value) => updateSection('hero', { portraitImage: value })}
-                        placeholder="이미지 주소"
-                      />
-                    </div>
-                  </div>
-                ) : null}
               </div>
             </div>
           </div>
@@ -1383,11 +1310,40 @@ function App() {
 
         <section className="section-interview section-grid reveal-up" id="about">
           <div className="section-heading about-panel">
-            <p className="section-tag">{data.interview.tag}</p>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-tag',
+              value: data.interview.tag,
+              placeholder: '섹션 태그',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input',
+              onChange: (value) => updateSection('interview', { tag: value }),
+            })}
             {data.interview.questions.map((question, index) => (
-              <div key={question.id}>
-                <h2 className={`section-title${index > 0 ? ' small' : ''}`}>{question.title}</h2>
-                <p className="section-copy">{question.answer}</p>
+              <div key={question.id} className="about-question-block">
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'h2',
+                  displayClassName: `section-title${index > 0 ? ' small' : ''}`,
+                  value: question.title,
+                  placeholder: '질문 제목',
+                  className: 'section-inline-editor',
+                  inputClassName: 'section-inline-input section-title-input',
+                  onChange: (value) => updateArrayItem('interview', 'questions', question.id, { title: value }),
+                })}
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'p',
+                  displayClassName: 'section-copy',
+                  value: question.answer,
+                  placeholder: '답변',
+                  multiline: true,
+                  rows: 4,
+                  className: 'section-inline-editor',
+                  inputClassName: 'section-inline-input section-copy-input',
+                  onChange: (value) => updateArrayItem('interview', 'questions', question.id, { answer: value }),
+                })}
               </div>
             ))}
           </div>
@@ -1396,26 +1352,102 @@ function App() {
             {data.interview.portraitImage ? (
               <img className="interview-photo upload-photo" src={data.interview.portraitImage} alt={data.interview.portraitLabel} />
             ) : (
-              <div className="interview-photo">{data.interview.portraitLabel}</div>
+              <div className="interview-photo">
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'span',
+                  displayClassName: 'interview-photo-text',
+                  value: data.interview.portraitLabel,
+                  placeholder: '인물 라벨',
+                  className: 'section-inline-editor',
+                  inputClassName: 'section-inline-input',
+                  onChange: (value) => updateSection('interview', { portraitLabel: value }),
+                })}
+              </div>
             )}
           </div>
         </section>
 
         <section className="section-grid section-career reveal-up" id="career">
           <div className="section-heading">
-            <p className="section-tag">{data.career.tag}</p>
-            <h2 className="section-title">{data.career.title}</h2>
-            <p className="section-copy">{data.career.copy}</p>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-tag',
+              value: data.career.tag,
+              placeholder: '섹션 태그',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input',
+              onChange: (value) => updateSection('career', { tag: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'h2',
+              displayClassName: 'section-title',
+              value: data.career.title,
+              placeholder: '섹션 제목',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input section-title-input',
+              onChange: (value) => updateSection('career', { title: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-copy',
+              value: data.career.copy,
+              placeholder: '섹션 설명',
+              multiline: true,
+              rows: 3,
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input section-copy-input',
+              onChange: (value) => updateSection('career', { copy: value }),
+            })}
           </div>
 
           <div className="career-stack">
             {data.career.items.map((item) => (
               <article className="career-card reveal-up" key={item.id}>
-                <h3>{item.title}</h3>
-                <p>{item.desc}</p>
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'h3',
+                  displayClassName: 'career-card-title',
+                  value: item.title,
+                  placeholder: '경력명',
+                  className: 'card-inline-editor',
+                  inputClassName: 'card-inline-input',
+                  onChange: (value) => updateArrayItem('career', 'items', item.id, { title: value }),
+                })}
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'p',
+                  displayClassName: 'career-card-desc',
+                  value: item.desc,
+                  placeholder: '경력 설명',
+                  multiline: true,
+                  rows: 3,
+                  className: 'card-inline-editor',
+                  inputClassName: 'card-inline-input card-textarea-input',
+                  onChange: (value) => updateArrayItem('career', 'items', item.id, { desc: value }),
+                })}
                 <ul>
-                  {item.bullets.map((bullet) => (
-                    <li key={bullet}>{bullet}</li>
+                  {item.bullets.map((bullet, bulletIndex) => (
+                    <li key={`${item.id}-${bulletIndex}`}>
+                      {edit({
+                        wrapperTag: 'span',
+                        displayTag: 'span',
+                        displayClassName: 'career-bullet',
+                        value: bullet,
+                        placeholder: '불릿',
+                        className: 'card-inline-editor card-bullet-editor',
+                        inputClassName: 'card-inline-input',
+                        onChange: (value) =>
+                          updateArrayItem('career', 'items', item.id, {
+                            bullets: item.bullets.map((currentBullet, currentBulletIndex) =>
+                              currentBulletIndex === bulletIndex ? value : currentBullet,
+                            ),
+                          }),
+                      })}
+                    </li>
                   ))}
                 </ul>
               </article>
@@ -1426,9 +1458,27 @@ function App() {
         <section className="section-skills skill-stage" id="skill">
           <div className="skill-rail" aria-hidden="true">
             <span className="rail-dot" />
-            <span className="rail-word">{data.skills.railWord}</span>
+            {edit({
+              wrapperTag: 'span',
+              displayTag: 'span',
+              displayClassName: 'rail-word',
+              value: data.skills.railWord,
+              placeholder: '철도 문구',
+              className: 'rail-inline-editor',
+              inputClassName: 'rail-inline-input',
+              onChange: (value) => updateSection('skills', { railWord: value }),
+            })}
             <span className="rail-line" />
-            <span className="rail-index">{data.skills.railIndex}</span>
+            {edit({
+              wrapperTag: 'span',
+              displayTag: 'span',
+              displayClassName: 'rail-index',
+              value: data.skills.railIndex,
+              placeholder: '연도',
+              className: 'rail-inline-editor',
+              inputClassName: 'rail-inline-input',
+              onChange: (value) => updateSection('skills', { railIndex: value }),
+            })}
           </div>
 
           <div className="skill-content">
@@ -1449,11 +1499,51 @@ function App() {
                 key={group.id}
               >
                 <div className={`skill-card ${SKILL_CARD_CLASSES[index]} reveal-up`}>
-                  <h2>{group.title}</h2>
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'h2',
+                    displayClassName: 'skill-card-title',
+                    value: group.title,
+                    placeholder: '스킬 그룹명',
+                    className: 'card-inline-editor',
+                    inputClassName: 'card-inline-input',
+                    onChange: (value) =>
+                      setData((prev) => ({
+                        ...prev,
+                        skills: {
+                          ...prev.skills,
+                          groups: prev.skills.groups.map((currentGroup) =>
+                            currentGroup.id === group.id ? { ...currentGroup, title: value } : currentGroup,
+                          ),
+                        },
+                      })),
+                  })}
                   {group.items.map((item) => (
                     <div className="skill-row" key={item.id}>
-                      <strong>{item.name}</strong>
-                      <p>{item.desc}</p>
+                      {edit({
+                        wrapperTag: 'div',
+                        displayTag: 'strong',
+                        displayClassName: 'skill-row-name',
+                        value: item.name,
+                        placeholder: '기술명',
+                        className: 'card-inline-editor',
+                        inputClassName: 'card-inline-input',
+                        onChange: (value) =>
+                          updateNestedArrayItem('skills', 'groups', group.id, 'items', item.id, { name: value }),
+                      })}
+                      {edit({
+                        wrapperTag: 'div',
+                        displayTag: 'p',
+                        displayClassName: 'skill-row-desc',
+                        value: item.desc,
+                        placeholder: '설명',
+                        multiline: true,
+                        rows: 3,
+                        className: 'card-inline-editor',
+                        inputClassName: 'card-inline-input card-textarea-input',
+                        onChange: (value) =>
+                          updateNestedArrayItem('skills', 'groups', group.id, 'items', item.id, { desc: value }),
+                      })}
                     </div>
                   ))}
                 </div>
@@ -1464,8 +1554,26 @@ function App() {
 
         <section className="section-projects" id="projects">
           <div className="projects-header reveal-up">
-            <p className="section-tag">{data.projects.tag}</p>
-            <h2 className="section-title">{data.projects.title}</h2>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-tag',
+              value: data.projects.tag,
+              placeholder: '섹션 태그',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input',
+              onChange: (value) => updateSection('projects', { tag: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'h2',
+              displayClassName: 'section-title',
+              value: data.projects.title,
+              placeholder: '섹션 제목',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input section-title-input',
+              onChange: (value) => updateSection('projects', { title: value }),
+            })}
           </div>
 
           <div className="project-list">
@@ -1476,24 +1584,95 @@ function App() {
                   {project.image ? <img className="project-image" src={project.image} alt={project.title} /> : <div className="project-image project-image-empty" aria-hidden="true" />}
                 </div>
                 <div className="project-content">
-                  <p className="project-type">{project.type}</p>
-                  <h3>{project.title}</h3>
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'p',
+                    displayClassName: 'project-type',
+                    value: project.type,
+                    placeholder: '프로젝트 타입',
+                    className: 'card-inline-editor',
+                    inputClassName: 'card-inline-input',
+                    onChange: (value) => updateArrayItem('projects', 'items', project.id, { type: value }),
+                  })}
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'h3',
+                    displayClassName: 'project-title',
+                    value: project.title,
+                    placeholder: '프로젝트명',
+                    className: 'card-inline-editor',
+                    inputClassName: 'card-inline-input',
+                    onChange: (value) => updateArrayItem('projects', 'items', project.id, { title: value }),
+                  })}
                   <div className="project-details">
                     <div>
                       <span>기술</span>
-                      <strong>{project.tech || '미지정'}</strong>
+                      {edit({
+                        wrapperTag: 'div',
+                        displayTag: 'strong',
+                        displayClassName: 'project-detail-value',
+                        value: project.tech,
+                        placeholder: '기술 스택',
+                        className: 'card-inline-editor',
+                        inputClassName: 'card-inline-input',
+                        onChange: (value) => updateArrayItem('projects', 'items', project.id, { tech: value }),
+                      })}
                     </div>
                     <div>
                       <span>언어</span>
-                      <strong>{project.language || '미지정'}</strong>
+                      {edit({
+                        wrapperTag: 'div',
+                        displayTag: 'strong',
+                        displayClassName: 'project-detail-value',
+                        value: project.language,
+                        placeholder: '언어',
+                        className: 'card-inline-editor',
+                        inputClassName: 'card-inline-input',
+                        onChange: (value) => updateArrayItem('projects', 'items', project.id, { language: value }),
+                      })}
                     </div>
                   </div>
-                  <p className="project-overview">{project.overview || project.desc || '개요가 없습니다.'}</p>
-                  <p className="project-purpose"><strong>목적</strong> {project.purpose || '포트폴리오 프로젝트 정리'}</p>
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'p',
+                    displayClassName: 'project-overview',
+                    value: project.overview || project.desc || '',
+                    placeholder: '개요',
+                    multiline: true,
+                    rows: 4,
+                    className: 'card-inline-editor',
+                    inputClassName: 'card-inline-input card-textarea-input',
+                    onChange: (value) => updateArrayItem('projects', 'items', project.id, { overview: value }),
+                  })}
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'p',
+                    displayClassName: 'project-purpose',
+                    value: project.purpose || '',
+                    placeholder: '목적',
+                    multiline: true,
+                    rows: 3,
+                    className: 'card-inline-editor',
+                    inputClassName: 'card-inline-input card-textarea-input',
+                    onChange: (value) => updateArrayItem('projects', 'items', project.id, { purpose: value }),
+                  })}
                   {project.repoUrl ? (
-                    <a className="project-link" href={project.repoUrl} target="_blank" rel="noreferrer">
-                      GitHub 바로가기
-                    </a>
+                    edit({
+                      wrapperTag: 'div',
+                      displayTag: 'a',
+                      displayProps: {
+                        href: project.repoUrl,
+                        target: '_blank',
+                        rel: 'noreferrer',
+                        className: 'project-link',
+                      },
+                      displayClassName: 'project-link',
+                      value: project.repoUrl,
+                      placeholder: 'GitHub URL',
+                      className: 'card-inline-editor',
+                      inputClassName: 'card-inline-input',
+                      onChange: (value) => updateArrayItem('projects', 'items', project.id, { repoUrl: value }),
+                    })
                   ) : null}
                 </div>
               </article>
@@ -1503,15 +1682,66 @@ function App() {
 
         <section className="contact-panel reveal-up" id="contact">
           <div>
-            <p className="section-tag">{data.contact.tag}</p>
-            <h2 className="section-title">{data.contact.title}</h2>
-            <p className="section-copy">{data.contact.copy}</p>
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-tag',
+              value: data.contact.tag,
+              placeholder: '섹션 태그',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input',
+              onChange: (value) => updateSection('contact', { tag: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'h2',
+              displayClassName: 'section-title',
+              value: data.contact.title,
+              placeholder: '연락처 제목',
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input section-title-input',
+              onChange: (value) => updateSection('contact', { title: value }),
+            })}
+            {edit({
+              wrapperTag: 'div',
+              displayTag: 'p',
+              displayClassName: 'section-copy',
+              value: data.contact.copy,
+              placeholder: '연락처 설명',
+              multiline: true,
+              rows: 3,
+              className: 'section-inline-editor',
+              inputClassName: 'section-inline-input section-copy-input',
+              onChange: (value) => updateSection('contact', { copy: value }),
+            })}
           </div>
           <div className="contact-links">
             {data.contact.buttons.map((button) => (
-              <a className={`button ${button.variant === 'primary' ? 'primary' : 'secondary'}`} href={button.href} key={button.id}>
-                {button.label}
-              </a>
+              <div className="contact-button-editor" key={button.id}>
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'a',
+                  displayProps: {
+                    href: button.href,
+                    className: `button ${button.variant === 'primary' ? 'primary' : 'secondary'}`,
+                  },
+                  value: button.label,
+                  placeholder: '버튼명',
+                  className: 'hero-action-editor hero-action-label-editor',
+                  inputClassName: 'hero-inline-input hero-action-input',
+                  onChange: (value) => updateArrayItem('contact', 'buttons', button.id, { label: value }),
+                })}
+                {edit({
+                  wrapperTag: 'div',
+                  displayTag: 'span',
+                  displayClassName: 'contact-button-href',
+                  value: button.href,
+                  placeholder: '링크',
+                  className: 'hero-action-editor hero-action-href-editor',
+                  inputClassName: 'hero-inline-input hero-action-input',
+                  onChange: (value) => updateArrayItem('contact', 'buttons', button.id, { href: value }),
+                })}
+              </div>
             ))}
             <a className="button secondary" href="#setting">
               설정 열기
