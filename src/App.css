@@ -350,10 +350,12 @@ img {
   left: 16px;
   right: auto;
   bottom: auto;
-  z-index: 30;
+  z-index: 999;
   display: inline-flex;
   align-items: center;
+  justify-content: flex-start;
   max-width: calc(100% - 32px);
+  pointer-events: auto;
 }
 
 .hero-portrait .image-upload-control,
@@ -364,18 +366,18 @@ img {
   left: 16px;
   right: auto;
   bottom: auto;
-  z-index: 30;
+  z-index: 999;
 }
 
 .image-upload-control .image-upload-trigger {
   cursor: pointer;
-  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.42);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.5);
   white-space: nowrap;
   min-width: 104px;
   padding: 10px 16px;
-  border: 1px solid rgba(255, 255, 255, 0.34);
-  background: rgba(0, 0, 0, 0.78);
-  color: #f3f1eb;
+  border: 1px solid rgba(255, 255, 255, 0.45);
+  background: rgba(0, 0, 0, 0.9);
+  color: #fff;
   backdrop-filter: blur(14px);
 }
 
