@@ -1,4 +1,4 @@
-# WhoMI Supabase
+# WhoMI
 
 기존 WhoMI와 분리한 포트폴리오 프로젝트입니다.
 

@@ -1,13 +1,52 @@
 import { useEffect, useMemo, useState } from 'react'
+import { getApp, getApps, initializeApp } from 'firebase/app'
+import { collection, doc, getDoc, getDocs, getFirestore, orderBy, query, setDoc } from 'firebase/firestore'
 import gsap from 'gsap'
 import { ScrollTrigger } from 'gsap/ScrollTrigger'
 import './App.css'
 
 gsap.registerPlugin(ScrollTrigger)
 
-const STORAGE_KEY = 'whomi-supabase-editor-v1'
-const GITHUB_STORAGE_KEY = 'whomi-supabase-github-settings-v1'
-const DB_STORAGE_KEY = 'whomi-supabase-db-settings-v1'
+const FIREBASE_CONFIG = {
+  apiKey: import.meta.env.VITE_FIREBASE_API_KEY || '',
+  authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || '',
+  projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || '',
+  storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: import.meta.env.VITE_FIREBASE_APP_ID || '',
+  measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || '',
+}
+
+const FIREBASE_COLLECTIONS = {
+  pages: import.meta.env.VITE_FIREBASE_PORTFOLIO_COLLECTION || 'portfolio_pages',
+  projects: import.meta.env.VITE_FIREBASE_PROJECTS_COLLECTION || 'portfolio_projects',
+}
+
+const FIREBASE_REQUIRED_KEYS = ['apiKey', 'authDomain', 'projectId', 'appId']
+
+const STORAGE_KEY = 'whomi-editor-v1'
+const GITHUB_STORAGE_KEY = 'whomi-github-settings-v1'
+const DB_STORAGE_KEY = 'whomi-db-settings-v1'
+
+const getFirebaseConfigError = () => {
+  const missing = FIREBASE_REQUIRED_KEYS.filter((key) => !FIREBASE_CONFIG[key])
+  return missing.length ? `Firebase 환경변수가 부족합니다: ${missing.join(', ')}` : ''
+}
+
+const getFirebaseApp = () => {
+  const configError = getFirebaseConfigError()
+  if (configError) {
+    throw new Error(configError)
+  }
+
+  if (!getApps().length) {
+    return initializeApp(FIREBASE_CONFIG)
+  }
+
+  return getApp()
+}
+
+const getFirebaseDb = () => getFirestore(getFirebaseApp())
 
 const createId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`
 const clone = (value) => JSON.parse(JSON.stringify(value))
@@ -41,19 +80,19 @@ const buildProjectFromRepo = (repo) => ({
   purpose: normalizeText(repo.purpose, '포트폴리오 프로젝트 정리'),
   image: '',
   repoUrl: normalizeText(repo.html_url, ''),
-  supabaseId: '',
+  firebaseId: '',
 })
 
-const buildProjectFromSupabaseRow = (row) => {
-  const supabaseId = row?.id == null ? '' : String(row.id)
+const buildProjectFromFirebaseDoc = (row) => {
+  const firebaseId = row?.id == null ? '' : String(row.id)
   return {
     id: createId(),
-    supabaseId,
-    title: normalizeText(row?.title || row?.name, 'Supabase 프로젝트'),
-    type: normalizeText(row?.type || row?.category, 'Supabase / 프로젝트'),
+    firebaseId,
+    title: normalizeText(row?.title || row?.name, 'Firebase 프로젝트'),
+    type: normalizeText(row?.type || row?.category, 'Firebase / 프로젝트'),
     tech: normalizeText(row?.tech || row?.technologies || row?.stack, '미지정'),
     language: normalizeText(row?.language || row?.lang, '미지정'),
-    overview: normalizeText(row?.overview || row?.description || row?.desc, 'Supabase 저장소에서 불러온 프로젝트입니다.'),
+    overview: normalizeText(row?.overview || row?.description || row?.desc, 'Firebase 저장소에서 불러온 프로젝트입니다.'),
     purpose: normalizeText(row?.purpose || row?.goal || row?.objective, '포트폴리오 프로젝트 정리'),
     image: normalizeText(row?.image || row?.image_url || row?.imageUrl, ''),
     repoUrl: normalizeText(row?.repoUrl || row?.repo_url || row?.repoURL || row?.url, ''),
@@ -222,7 +261,7 @@ const defaultData = {
         purpose: '브랜드 소개와 시각적 임팩트 전달',
         image: '',
         repoUrl: '',
-        supabaseId: '',
+        firebaseId: '',
       },
       {
         id: createId(),
@@ -234,7 +273,7 @@ const defaultData = {
         purpose: '섹션 전환과 인터랙션 경험 전달',
         image: '',
         repoUrl: '',
-        supabaseId: '',
+        firebaseId: '',
       },
       {
         id: createId(),
@@ -246,7 +285,7 @@ const defaultData = {
         purpose: '실험 결과와 학습 정리',
         image: '',
         repoUrl: '',
-        supabaseId: '',
+        firebaseId: '',
       },
       {
         id: createId(),
@@ -258,7 +297,7 @@ const defaultData = {
         purpose: '포트폴리오 리뉴얼과 구조 정리',
         image: '',
         repoUrl: '',
-        supabaseId: '',
+        firebaseId: '',
       },
     ],
   },
@@ -324,7 +363,7 @@ function normalizeData(raw) {
         purpose: item.purpose || '',
         image: item.image || '',
         repoUrl: item.repoUrl || '',
-        supabaseId: item.supabaseId || '',
+        firebaseId: item.firebaseId || '',
       }))
     : next.projects.items
 
@@ -365,32 +404,26 @@ function loadStoredDbState() {
     const raw = JSON.parse(window.localStorage.getItem(DB_STORAGE_KEY) || 'null')
     if (!raw || typeof raw !== 'object') {
       return {
-        url: '',
-        key: '',
-        table: 'portfolio_pages',
-        rowId: 'whomi-supabase-main',
-        projectTable: 'portfolio_projects',
+        pagesCollection: FIREBASE_COLLECTIONS.pages,
+        pageDocId: 'whomi-firebase-main',
+        projectsCollection: FIREBASE_COLLECTIONS.projects,
         lastLoadedAt: '',
         lastSavedAt: '',
       }
     }
 
     return {
-      url: raw.url || '',
-      key: raw.key || '',
-      table: raw.table || 'portfolio_pages',
-      rowId: raw.rowId || 'whomi-supabase-main',
-      projectTable: raw.projectTable || 'portfolio_projects',
+      pagesCollection: raw.pagesCollection || 'portfolio_pages',
+      pageDocId: raw.pageDocId || 'whomi-firebase-main',
+      projectsCollection: raw.projectsCollection || 'portfolio_projects',
       lastLoadedAt: raw.lastLoadedAt || '',
       lastSavedAt: raw.lastSavedAt || '',
     }
   } catch {
     return {
-      url: '',
-      key: '',
-      table: 'portfolio_pages',
-      rowId: 'whomi-supabase-main',
-      projectTable: 'portfolio_projects',
+      pagesCollection: FIREBASE_COLLECTIONS.pages,
+      pageDocId: 'whomi-firebase-main',
+      projectsCollection: FIREBASE_COLLECTIONS.projects,
       lastLoadedAt: '',
       lastSavedAt: '',
     }
@@ -408,30 +441,81 @@ function splitLines(text) {
     .filter(Boolean)
 }
 
+function inlinePreviewText(value, placeholder, type) {
+  const text = String(value || '').trim()
+  if (type === 'password') return text ? '입력됨' : placeholder || '비어 있음'
+  return text || placeholder || '비어 있음'
+}
+
 function InputField({ label, value, onChange, placeholder, type = 'text' }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const preview = inlinePreviewText(value, placeholder, type)
+
   return (
-    <label className="field">
-      <span>{label}</span>
-      <input type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    </label>
+    <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
+      <div className="field-row-head">
+        <span>{label}</span>
+        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+          {isEditing ? '저장' : '수정'}
+        </button>
+      </div>
+      {isEditing ? (
+        <input autoFocus type={type} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <button className="inline-field-preview" type="button" onClick={() => setIsEditing(true)}>
+          <strong>{preview}</strong>
+          <span>클릭해서 수정</span>
+        </button>
+      )}
+    </div>
   )
 }
 
 function TextAreaField({ label, value, onChange, placeholder, rows = 4 }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const preview = String(value || '').trim() || placeholder || '비어 있음'
+
   return (
-    <label className="field field-textarea">
-      <span>{label}</span>
-      <textarea rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
-    </label>
+    <div className={`field field-textarea inline-field${isEditing ? ' is-editing' : ''}`}>
+      <div className="field-row-head">
+        <span>{label}</span>
+        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+          {isEditing ? '저장' : '수정'}
+        </button>
+      </div>
+      {isEditing ? (
+        <textarea autoFocus rows={rows} value={value} placeholder={placeholder} onChange={(e) => onChange(e.target.value)} />
+      ) : (
+        <button className="inline-field-preview inline-field-preview-textarea" type="button" onClick={() => setIsEditing(true)}>
+          <strong>{preview}</strong>
+          <span>클릭해서 수정</span>
+        </button>
+      )}
+    </div>
   )
 }
 
 function SelectField({ label, value, onChange, children }) {
+  const [isEditing, setIsEditing] = useState(false)
+  const preview = inlinePreviewText(value, '', 'text')
+
   return (
-    <label className="field">
-      <span>{label}</span>
-      <select value={value} onChange={(e) => onChange(e.target.value)}>{children}</select>
-    </label>
+    <div className={`field inline-field${isEditing ? ' is-editing' : ''}`}>
+      <div className="field-row-head">
+        <span>{label}</span>
+        <button className="tiny-button" type="button" onClick={() => setIsEditing((prev) => !prev)}>
+          {isEditing ? '저장' : '수정'}
+        </button>
+      </div>
+      {isEditing ? (
+        <select autoFocus value={value} onChange={(e) => onChange(e.target.value)}>{children}</select>
+      ) : (
+        <button className="inline-field-preview" type="button" onClick={() => setIsEditing(true)}>
+          <strong>{preview}</strong>
+          <span>클릭해서 수정</span>
+        </button>
+      )}
+    </div>
   )
 }
 
@@ -446,11 +530,11 @@ function App() {
   const [dbLoading, setDbLoading] = useState(false)
   const [dbError, setDbError] = useState('')
   const [dbStatus, setDbStatus] = useState('')
-  const [supabaseProjects, setSupabaseProjects] = useState({ rows: [], lastFetchedAt: '' })
-  const [supabaseProjectsLoading, setSupabaseProjectsLoading] = useState(false)
-  const [supabaseProjectsError, setSupabaseProjectsError] = useState('')
-  const [supabaseProjectsStatus, setSupabaseProjectsStatus] = useState('')
-  const savedAt = '방금'
+  const [firebaseProjects, setFirebaseProjects] = useState({ rows: [], lastFetchedAt: '' })
+  const [firebaseProjectsLoading, setFirebaseProjectsLoading] = useState(false)
+  const [firebaseProjectsError, setFirebaseProjectsError] = useState('')
+  const [firebaseProjectsStatus, setFirebaseProjectsStatus] = useState('')
+  const savedAt = dbState.lastSavedAt ? new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true }) : ''
 
   useEffect(() => {
     const syncHash = () => {
@@ -649,9 +733,9 @@ function App() {
     setDbStatus('')
   }
 
-  const clearSupabaseProjectResults = () => {
-    setSupabaseProjectsError('')
-    setSupabaseProjectsStatus('')
+  const clearFirebaseProjectResults = () => {
+    setFirebaseProjectsError('')
+    setFirebaseProjectsStatus('')
   }
 
   const fetchGithubRepos = async () => {
@@ -715,13 +799,11 @@ function App() {
   }
 
   const fetchDbPortfolio = async () => {
-    const url = dbState.url.trim().replace(/\/$/, '')
-    const key = dbState.key.trim()
-    const table = dbState.table.trim()
-    const rowId = dbState.rowId.trim()
+    const pagesCollection = dbState.pagesCollection.trim()
+    const pageDocId = dbState.pageDocId.trim()
 
-    if (!url || !key || !table || !rowId) {
-      setDbError('Supabase 주소, 키, 테이블명, row id를 먼저 입력해 주세요.')
+    if (!pagesCollection || !pageDocId) {
+      setDbError('Firebase 컬렉션명과 문서 ID를 먼저 입력해 주세요.')
       return
     }
 
@@ -729,43 +811,45 @@ function App() {
     clearDbResults()
 
     try {
-      const response = await fetch(`${url}/rest/v1/${encodeURIComponent(table)}?id=eq.${encodeURIComponent(rowId)}&select=payload`, {
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          Accept: 'application/json',
-        },
-      })
+      const db = getFirebaseDb()
+      const snapshot = await getDoc(doc(db, pagesCollection, pageDocId))
 
-      if (!response.ok) {
-        throw new Error(`DB 요청 실패 (${response.status})`)
+      if (!snapshot.exists()) {
+        throw new Error('저장된 포트폴리오 데이터가 없습니다.')
       }
 
-      const rows = await response.json()
-      const nextData = Array.isArray(rows) ? rows[0]?.payload : null
-
+      const nextSnapshotData = snapshot.data() || {}
+      const nextData = nextSnapshotData.payload
       if (!nextData || typeof nextData !== 'object') {
         throw new Error('저장된 포트폴리오 데이터가 없습니다.')
       }
 
       setData(clone(nextData))
-      setDbState((prev) => ({ ...prev, lastLoadedAt: new Date().toISOString() }))
-      setDbStatus('DB에서 포트폴리오를 불러왔습니다.')
+      setDbState((prev) => {
+        const nextSettings = nextSnapshotData.settings && typeof nextSnapshotData.settings === 'object' ? nextSnapshotData.settings : {}
+
+        return {
+          ...prev,
+          pagesCollection: nextSettings.pagesCollection || prev.pagesCollection,
+          pageDocId: nextSettings.pageDocId || prev.pageDocId,
+          projectsCollection: nextSettings.projectsCollection || prev.projectsCollection,
+          lastLoadedAt: new Date().toISOString(),
+        }
+      })
+      setDbStatus('Firebase에서 포트폴리오를 불러왔습니다.')
     } catch (error) {
-      setDbError(error instanceof Error ? error.message : 'DB에서 불러오지 못했습니다.')
+      setDbError(error instanceof Error ? error.message : 'Firebase에서 불러오지 못했습니다.')
     } finally {
       setDbLoading(false)
     }
   }
 
   const saveDbPortfolio = async () => {
-    const url = dbState.url.trim().replace(/\/$/, '')
-    const key = dbState.key.trim()
-    const table = dbState.table.trim()
-    const rowId = dbState.rowId.trim()
+    const pagesCollection = dbState.pagesCollection.trim()
+    const pageDocId = dbState.pageDocId.trim()
 
-    if (!url || !key || !table || !rowId) {
-      setDbError('Supabase 주소, 키, 테이블명, row id를 먼저 입력해 주세요.')
+    if (!pagesCollection || !pageDocId) {
+      setDbError('Firebase 컬렉션명과 문서 ID를 먼저 입력해 주세요.')
       return
     }
 
@@ -773,76 +857,64 @@ function App() {
     clearDbResults()
 
     try {
-      const response = await fetch(`${url}/rest/v1/${encodeURIComponent(table)}?on_conflict=id`, {
-        method: 'POST',
-        headers: {
-          apikey: key,
-          Authorization: `Bearer ${key}`,
-          'Content-Type': 'application/json',
-          Prefer: 'resolution=merge-duplicates,return=minimal',
+      const db = getFirebaseDb()
+      await setDoc(
+        doc(db, pagesCollection, pageDocId),
+        {
+          payload: clone(data),
+          settings: {
+            pagesCollection,
+            pageDocId,
+            projectsCollection: dbState.projectsCollection.trim(),
+          },
         },
-        body: JSON.stringify({ id: rowId, payload: data }),
-      })
-
-      if (!response.ok) {
-        throw new Error(`DB 저장 실패 (${response.status})`)
-      }
+        { merge: true },
+      )
 
       setDbState((prev) => ({ ...prev, lastSavedAt: new Date().toISOString() }))
-      setDbStatus('현재 포트폴리오를 DB에 저장했습니다.')
+      setDbStatus('현재 포트폴리오를 Firebase에 저장했습니다.')
     } catch (error) {
-      setDbError(error instanceof Error ? error.message : 'DB에 저장하지 못했습니다.')
+      setDbError(error instanceof Error ? error.message : 'Firebase에 저장하지 못했습니다.')
     } finally {
       setDbLoading(false)
     }
   }
 
-  const fetchSupabaseProjects = async () => {
-    const url = dbState.url.trim().replace(/\/$/, '')
-    const key = dbState.key.trim()
-    const table = dbState.projectTable.trim()
+  const fetchFirebaseProjects = async () => {
+    const projectsCollection = dbState.projectsCollection.trim()
 
-    if (!url || !key || !table) {
-      setSupabaseProjectsError('Supabase 주소, 키, 프로젝트 테이블명을 먼저 입력해 주세요.')
+    if (!projectsCollection) {
+      setFirebaseProjectsError('Firebase 프로젝트 컬렉션명을 먼저 입력해 주세요.')
       return
     }
 
-    setSupabaseProjectsLoading(true)
-    clearSupabaseProjectResults()
+    setFirebaseProjectsLoading(true)
+    clearFirebaseProjectResults()
 
     try {
-      const response = await fetch(
-        `${url}/rest/v1/${encodeURIComponent(table)}?select=id,title,name,type,category,tech,technologies,stack,language,lang,overview,description,desc,purpose,goal,objective,image,image_url,imageUrl,repoUrl,repo_url,repoURL,url&order=id.asc`,
-        {
-          headers: {
-            apikey: key,
-            Authorization: `Bearer ${key}`,
-            Accept: 'application/json',
-          },
-        },
-      )
+      const db = getFirebaseDb()
+      const snapshots = await getDocs(query(collection(db, projectsCollection), orderBy('title')))
+      const normalized = snapshots.docs
+        .filter(Boolean)
+        .map((snapshot) => ({ ...buildProjectFromFirebaseDoc({ id: snapshot.id, ...snapshot.data() }), source: 'firebase' }))
 
-      if (!response.ok) {
-        throw new Error(`프로젝트 목록 요청 실패 (${response.status})`)
-      }
-
-      const rows = await response.json()
-      const normalized = Array.isArray(rows) ? rows.filter(Boolean).map((row) => ({ ...buildProjectFromSupabaseRow(row), source: 'supabase' })) : []
-
-      setSupabaseProjects({ rows: normalized, lastFetchedAt: new Date().toISOString() })
-      setSupabaseProjectsStatus(`${normalized.length}개 프로젝트를 불러왔습니다.`)
+      setFirebaseProjects({ rows: normalized, lastFetchedAt: new Date().toISOString() })
+      setFirebaseProjectsStatus(`${normalized.length}개 프로젝트를 불러왔습니다.`)
     } catch (error) {
-      setSupabaseProjectsError(error instanceof Error ? error.message : '프로젝트 목록을 불러오지 못했습니다.')
+      setFirebaseProjectsError(error instanceof Error ? error.message : '프로젝트 목록을 불러오지 못했습니다.')
     } finally {
-      setSupabaseProjectsLoading(false)
+      setFirebaseProjectsLoading(false)
     }
   }
 
-  const importSupabaseProject = (row) => {
-    const project = buildProjectFromSupabaseRow(row)
+  const importFirebaseProject = (row) => {
+    const project = buildProjectFromFirebaseDoc(row)
 
     setData((prev) => {
-      const index = prev.projects.items.findIndex((item) => item.supabaseId && item.supabaseId === project.supabaseId)
+      const index = prev.projects.items.findIndex(
+        (item) =>
+          item.firebaseId && item.firebaseId === project.firebaseId,
+      )
 
       if (index === -1) {
         return {
@@ -1410,7 +1482,7 @@ function App() {
               <div className="settings-card-head">
                 <div>
                   <p className="section-tag">DB</p>
-                  <h2 className="section-title">Supabase 연결</h2>
+                  <h2 className="section-title">Firebase 연결</h2>
                 </div>
                 <button className="tiny-button" type="button" onClick={() => setDbState((prev) => ({ ...prev, lastLoadedAt: '', lastSavedAt: '' }))}>
                   기록 지우기
@@ -1419,52 +1491,39 @@ function App() {
 
               <div className="field-grid github-grid">
                 <InputField
-                  label="Supabase URL"
-                  value={dbState.url}
-                  onChange={(v) => updateDbSetting('url', v)}
-                  placeholder="https://xxxx.supabase.co"
-                />
-                <InputField
-                  label="anon key"
-                  type="password"
-                  value={dbState.key}
-                  onChange={(v) => updateDbSetting('key', v)}
-                  placeholder="eyJ..."
-                />
-                <InputField
-                  label="테이블명"
-                  value={dbState.table}
-                  onChange={(v) => updateDbSetting('table', v)}
+                  label="Firestore 컬렉션명"
+                  value={dbState.pagesCollection}
+                  onChange={(v) => updateDbSetting('pagesCollection', v)}
                   placeholder="portfolio_pages"
                 />
                 <InputField
-                  label="row id"
-                  value={dbState.rowId}
-                  onChange={(v) => updateDbSetting('rowId', v)}
-                  placeholder="whomi-supabase-main"
+                  label="문서 ID"
+                  value={dbState.pageDocId}
+                  onChange={(v) => updateDbSetting('pageDocId', v)}
+                  placeholder="whomi-firebase-main"
                 />
                 <InputField
-                  label="프로젝트 테이블명"
-                  value={dbState.projectTable}
-                  onChange={(v) => updateDbSetting('projectTable', v)}
+                  label="프로젝트 컬렉션명"
+                  value={dbState.projectsCollection}
+                  onChange={(v) => updateDbSetting('projectsCollection', v)}
                   placeholder="portfolio_projects"
                 />
               </div>
 
               <div className="settings-actions">
                 <button className="button primary small" type="button" onClick={fetchDbPortfolio} disabled={dbLoading}>
-                  {dbLoading ? '불러오는 중...' : 'DB에서 불러오기'}
+                  {dbLoading ? '불러오는 중...' : 'Firebase에서 불러오기'}
                 </button>
                 <button className="button small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
-                  {dbLoading ? '저장 중...' : 'DB에 저장하기'}
+                  {dbLoading ? '저장 중...' : 'Firebase에 저장하기'}
                 </button>
-                <button className="button small" type="button" onClick={fetchSupabaseProjects} disabled={supabaseProjectsLoading}>
-                  {supabaseProjectsLoading ? '불러오는 중...' : '프로젝트 목록 가져오기'}
+                <button className="button small" type="button" onClick={fetchFirebaseProjects} disabled={firebaseProjectsLoading}>
+                  {firebaseProjectsLoading ? '불러오는 중...' : '프로젝트 목록 가져오기'}
                 </button>
-                <span className="settings-action-note">클라이언트 연결은 anon key만 쓰고, service role key는 넣지 마세요.</span>
+                <span className="settings-action-note">저장 문서는 `payload`와 `settings`로 나뉘어 들어갑니다.</span>
               </div>
 
-              <p className="settings-action-note">DB 테이블은 <code>id</code> text primary key, <code>payload</code> jsonb로 맞추면 됩니다. 프로젝트 테이블은 <code>title</code>, <code>tech</code>, <code>language</code>, <code>overview</code>, <code>purpose</code> 중심으로 두면 됩니다.</p>
+              <p className="settings-action-note">Firestore에는 <code>{`portfolio_pages/{문서ID}`}</code> 문서 안에 포트폴리오 본문은 <code>payload</code>로, 연결 설정은 <code>settings</code>로 들어갑니다. 프로젝트는 <code>portfolio_projects</code> 컬렉션에서 읽습니다.</p>
 
               {dbError ? <p className="settings-feedback error">{dbError}</p> : null}
               {dbStatus ? <p className="settings-feedback success">{dbStatus}</p> : null}
@@ -1478,18 +1537,18 @@ function App() {
                   마지막 저장: {new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true })}
                 </p>
               ) : null}
-              {supabaseProjectsError ? <p className="settings-feedback error">{supabaseProjectsError}</p> : null}
-              {supabaseProjectsStatus ? <p className="settings-feedback success">{supabaseProjectsStatus}</p> : null}
-              {supabaseProjects.lastFetchedAt ? (
+              {firebaseProjectsError ? <p className="settings-feedback error">{firebaseProjectsError}</p> : null}
+              {firebaseProjectsStatus ? <p className="settings-feedback success">{firebaseProjectsStatus}</p> : null}
+              {firebaseProjects.lastFetchedAt ? (
                 <p className="settings-feedback muted">
-                  프로젝트 목록 마지막 불러오기: {new Date(supabaseProjects.lastFetchedAt).toLocaleString('ko-KR', { hour12: true })}
+                  프로젝트 목록 마지막 불러오기: {new Date(firebaseProjects.lastFetchedAt).toLocaleString('ko-KR', { hour12: true })}
                 </p>
               ) : null}
 
-              <div className="supabase-project-list">
-                {supabaseProjects.rows.length ? (
-                  supabaseProjects.rows.map((row) => (
-                    <button className="supabase-project-card" type="button" key={row.supabaseId || row.id} onClick={() => importSupabaseProject(row)}>
+              <div className="firebase-project-list">
+                {firebaseProjects.rows.length ? (
+                  firebaseProjects.rows.map((row) => (
+                    <button className="firebase-project-card" type="button" key={row.firebaseId || row.id} onClick={() => importFirebaseProject(row)}>
                       <div className="github-repo-head">
                         <strong>{row.title}</strong>
                         <span>{row.type}</span>
@@ -1503,7 +1562,7 @@ function App() {
                   ))
                 ) : (
                   <div className="github-repo-empty">
-                    <p>프로젝트 테이블을 연결하면 여기에 목록이 표시됩니다.</p>
+                    <p>프로젝트 컬렉션을 연결하면 여기에 목록이 표시됩니다.</p>
                   </div>
                 )}
               </div>

@@ -1041,6 +1041,48 @@ img {
   gap: 10px;
 }
 
+.inline-field {
+  align-content: start;
+}
+
+.inline-field.is-editing {
+  position: relative;
+}
+
+.inline-field-preview {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 46px;
+  padding: 12px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.22);
+  color: #f3f1eb;
+  text-align: left;
+  cursor: pointer;
+}
+
+.inline-field-preview strong {
+  font-size: 14px;
+  line-height: 1.45;
+  font-weight: 700;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.inline-field-preview span {
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(243, 241, 235, 0.5);
+}
+
+.inline-field-preview-textarea {
+  min-height: 110px;
+}
+
 .field {
   display: grid;
   gap: 8px;
@@ -1160,14 +1202,16 @@ img {
 }
 
 .github-repo-list,
-.supabase-project-list {
+.firebase-project-list,
+.whomi-project-list {
   display: grid;
   gap: 10px;
   margin-top: 16px;
 }
 
 .github-repo-card,
-.supabase-project-card {
+.firebase-project-card,
+.whomi-project-card {
   display: grid;
   gap: 8px;
   width: 100%;
