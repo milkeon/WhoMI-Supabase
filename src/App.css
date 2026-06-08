@@ -381,9 +381,24 @@ img {
   backdrop-filter: blur(14px);
 }
 
-.image-upload-overlay--photo .image-upload-trigger,
-.image-upload-overlay--media .image-upload-trigger {
-  min-width: 104px;
+.portrait-photo-toolbar {
+ display: flex;
+ justify-content: flex-start;
+ margin: 10px 0 12px;
+}
+
+.image-upload-overlay--hero {
+ position: static;
+ top: auto;
+ left: auto;
+ right: auto;
+ bottom: auto;
+ z-index: 1;
+ max-width: none;
+}
+
+.image-upload-overlay--hero .image-upload-trigger {
+ min-width: 120px;
 }
 
 .image-upload-input {

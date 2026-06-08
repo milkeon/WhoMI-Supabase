@@ -1554,6 +1554,15 @@ function App() {
                   inputClassName: 'hero-inline-input portrait-input',
                   onChange: (value) => updateSection('hero', { portraitLabel: value }),
                 })}
+                {isSettingMode ? (
+                  <div className="portrait-photo-toolbar">
+                    <ImageUploadControl
+                      buttonLabel={data.hero.portraitImage ? '이미지 변경' : '이미지 추가'}
+                      className="image-upload-overlay image-upload-overlay--hero"
+                      onUpload={uploadHeroPortraitImage}
+                    />
+                  </div>
+                ) : null}
                 <div className="portrait-art" aria-hidden="true">
                   {data.hero.portraitImage ? (
                     <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
@@ -1564,13 +1573,6 @@ function App() {
                       <div className="portrait-glow portrait-glow-2" />
                     </>
                   )}
-                  {isSettingMode ? (
-                    <ImageUploadControl
-                      buttonLabel={data.hero.portraitImage ? '이미지 변경' : '이미지 추가'}
-                      className="image-upload-overlay"
-                      onUpload={uploadHeroPortraitImage}
-                    />
-                  ) : null}
                 </div>
                 <div className="portrait-caption">
                   {edit({
