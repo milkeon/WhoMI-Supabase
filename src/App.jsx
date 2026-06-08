@@ -1644,6 +1644,15 @@ function App() {
 
           <div className="interview-portrait">
             <div className="interview-photo">
+              {isSettingMode ? (
+                <div className="image-upload-inline-wrap">
+                  <ImageUploadControl
+                    buttonLabel={data.interview.portraitImage ? '이미지 변경' : '이미지 추가'}
+                    className="image-upload-inline image-upload-inline--photo"
+                    onUpload={uploadInterviewPortraitImage}
+                  />
+                </div>
+              ) : null}
               {data.interview.portraitImage ? (
                 <img className="interview-photo-image upload-photo" src={data.interview.portraitImage} alt={data.interview.portraitLabel} />
               ) : (
@@ -1660,13 +1669,6 @@ function App() {
                   })}
                 </div>
               )}
-              {isSettingMode ? (
-                <ImageUploadControl
-                  buttonLabel={data.interview.portraitImage ? '이미지 변경' : '이미지 추가'}
-                  className="image-upload-overlay image-upload-overlay--photo"
-                  onUpload={uploadInterviewPortraitImage}
-                />
-              ) : null}
             </div>
           </div>
         </section>
@@ -1912,16 +1914,18 @@ function App() {
             {visibleProjects.map((project, index) => (
               <article className={`project-card reveal-up ${index % 2 === 0 ? 'from-right' : 'from-left'}`} key={project.id}>
                 <div className="project-media">
+                  {isSettingMode ? (
+                    <div className="image-upload-inline-wrap image-upload-inline-wrap--media">
+                      <ImageUploadControl
+                        buttonLabel={project.image ? '이미지 변경' : '이미지 추가'}
+                        className="image-upload-inline image-upload-inline--media"
+                        onUpload={(file) => uploadProjectImage(project.id, file)}
+                      />
+                    </div>
+                  ) : null}
                   <span className="project-media-tag">/</span>
                   {project.image ? <img className="project-image" src={project.image} alt={project.title} /> : <div className="project-image project-image-empty" aria-hidden="true" />}
                   {isSettingMode && project.visible === false ? <span className="project-hidden-badge">숨김</span> : null}
-                  {isSettingMode ? (
-                    <ImageUploadControl
-                      buttonLabel={project.image ? '이미지 변경' : '이미지 추가'}
-                      className="image-upload-overlay image-upload-overlay--media"
-                      onUpload={(file) => uploadProjectImage(project.id, file)}
-                    />
-                  ) : null}
                 </div>
                 <div className="project-content">
                   {edit({

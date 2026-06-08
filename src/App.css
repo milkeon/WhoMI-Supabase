@@ -381,6 +381,32 @@ img {
   backdrop-filter: blur(14px);
 }
 
+.image-upload-inline-wrap {
+  position: relative;
+  z-index: 4;
+  display: flex;
+  justify-content: flex-start;
+  margin: 0 0 12px;
+}
+
+.image-upload-inline {
+  position: relative;
+  top: auto;
+  left: auto;
+  right: auto;
+  bottom: auto;
+  z-index: 4;
+  max-width: 100%;
+}
+
+.image-upload-inline .image-upload-trigger {
+  min-width: 120px;
+}
+
+.image-upload-inline-wrap--media {
+  margin: 0 0 14px;
+}
+
 .portrait-photo-toolbar {
  display: flex;
  justify-content: flex-start;
