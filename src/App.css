@@ -1396,12 +1396,36 @@ img {
 
 .hero-action-item {
   display: grid;
-  gap: 10px;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.hero-action-item.is-editing {
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.hero-action-preview {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.hero-action-save {
+  flex: 0 0 auto;
 }
 
 .hero-action-edit {
   display: grid;
   gap: 10px;
+}
+
+.hero-action-edit-overlay {
+  padding-top: 12px;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .hero-action-edit .field-row-head {
@@ -1421,11 +1445,23 @@ img {
 
 .hero-portrait .portrait-photo {
   position: relative;
+  overflow: hidden;
 }
 
-.hero-portrait .portrait-edit-strip {
-  position: relative;
-  z-index: 2;
+.portrait-edit-overlay {
+  position: absolute;
+  left: 14px;
+  right: 14px;
+  bottom: 14px;
+  z-index: 3;
+  padding: 14px;
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(9, 9, 12, 0.82);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.32);
+  max-height: calc(100% - 28px);
+  overflow: auto;
 }
 
 .hero-portrait .portrait-edit-strip .compact-row-editor,

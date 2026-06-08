@@ -1272,12 +1272,19 @@ function App() {
 
             <div className="hero-actions">
               {data.hero.actions.map((action) => (
-                <div className="hero-action-item" key={action.id}>
-                  <a className={`button ${action.variant === 'primary' ? 'primary' : 'secondary'}`} href={action.href}>
-                    {action.label}
-                  </a>
+                <div className={`hero-action-item${isSettingMode ? ' is-editing' : ''}`} key={action.id}>
+                  <div className="hero-action-preview">
+                    <a className={`button ${action.variant === 'primary' ? 'primary' : 'secondary'}`} href={action.href}>
+                      {action.label}
+                    </a>
+                    {isSettingMode ? (
+                      <button className="tiny-button hero-action-save" type="button" onClick={() => saveDbPortfolio()} disabled={dbLoading}>
+                        {dbLoading ? '저장 중...' : '저장'}
+                      </button>
+                    ) : null}
+                  </div>
                   {isSettingMode ? (
-                    <div className="hero-action-edit">
+                    <div className="hero-action-edit hero-action-edit-overlay">
                       <CompactRowEditor
                         label="라벨"
                         value={action.label}
@@ -1310,8 +1317,25 @@ function App() {
             <div className="hero-orb hero-orb-2" />
             <div className="portrait-frame">
               <div className="portrait-photo">
+                <span className="portrait-label">{data.hero.portraitLabel}</span>
+                <div className="portrait-art" aria-hidden="true">
+                  {data.hero.portraitImage ? (
+                    <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
+                  ) : (
+                    <>
+                      <div className="portrait-face" />
+                      <div className="portrait-glow portrait-glow-1" />
+                      <div className="portrait-glow portrait-glow-2" />
+                    </>
+                  )}
+                </div>
+                <div className="portrait-caption">
+                  <span>{data.hero.portraitCaptionTop}</span>
+                  <strong>{data.hero.portraitCaptionBottom}</strong>
+                </div>
+
                 {isSettingMode ? (
-                  <div className="portrait-edit-strip">
+                  <div className="portrait-edit-strip portrait-edit-overlay">
                     <CompactRowEditor
                       label="사진 라벨"
                       value={data.hero.portraitLabel}
@@ -1350,26 +1374,7 @@ function App() {
                       />
                     </div>
                   </div>
-                ) : (
-                  <>
-                    <span className="portrait-label">{data.hero.portraitLabel}</span>
-                    <div className="portrait-art" aria-hidden="true">
-                      {data.hero.portraitImage ? (
-                        <img className="portrait-upload" src={data.hero.portraitImage} alt="" />
-                      ) : (
-                        <>
-                          <div className="portrait-face" />
-                          <div className="portrait-glow portrait-glow-1" />
-                          <div className="portrait-glow portrait-glow-2" />
-                        </>
-                      )}
-                    </div>
-                    <div className="portrait-caption">
-                      <span>{data.hero.portraitCaptionTop}</span>
-                      <strong>{data.hero.portraitCaptionBottom}</strong>
-                    </div>
-                  </>
-                )}
+                ) : null}
               </div>
             </div>
           </div>
