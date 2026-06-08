@@ -306,7 +306,7 @@ img {
   position: absolute;
   inset: 26px;
   display: grid;
-  grid-template-rows: auto auto minmax(0, 1fr) auto;
+  grid-template-rows: auto auto minmax(220px, 1fr) auto;
   align-content: stretch;
   gap: 12px;
   padding: 24px;
@@ -314,6 +314,21 @@ img {
   background:
     radial-gradient(circle at 50% 38%, rgba(255, 255, 255, 0.12), transparent 26%),
     linear-gradient(180deg, #171717 0%, #0e0e0e 100%);
+}
+
+.portrait-caption .editable-field {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 6px;
+}
+
+.portrait-caption .editable-field-button {
+  align-self: flex-end;
+}
+
+.portrait-art {
+  min-height: 220px;
 }
 
 .portrait-label {
@@ -346,28 +361,24 @@ img {
 }
 
 .image-upload-control {
-  position: absolute;
-  top: 16px;
-  left: 16px;
-  right: auto;
-  bottom: auto;
-  z-index: 999;
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: flex-start;
-  max-width: calc(100% - 32px);
+  max-width: 100%;
   pointer-events: auto;
+  z-index: 4;
 }
 
 .hero-portrait .image-upload-control,
 .interview-photo .image-upload-control,
 .project-media .image-upload-control {
-  position: absolute;
-  top: 16px;
-  left: 16px;
+  position: relative;
+  top: auto;
+  left: auto;
   right: auto;
   bottom: auto;
-  z-index: 999;
+  z-index: 4;
 }
 
 .image-upload-control .image-upload-trigger {
