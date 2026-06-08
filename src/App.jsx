@@ -1641,29 +1641,31 @@ function App() {
           </div>
 
           <div className="interview-portrait">
-            {data.interview.portraitImage ? (
-              <img className="interview-photo upload-photo" src={data.interview.portraitImage} alt={data.interview.portraitLabel} />
-            ) : (
-              <div className="interview-photo">
-                {edit({
-                  wrapperTag: 'div',
-                  displayTag: 'span',
-                  displayClassName: 'interview-photo-text',
-                  value: data.interview.portraitLabel,
-                  placeholder: '인물 라벨',
-                  className: 'section-inline-editor',
-                  inputClassName: 'section-inline-input',
-                  onChange: (value) => updateSection('interview', { portraitLabel: value }),
-                })}
-              </div>
-            )}
-            {isSettingMode ? (
-              <ImageUploadControl
-                buttonLabel={data.interview.portraitImage ? '이미지 변경' : '이미지 추가'}
-                className="image-upload-overlay"
-                onUpload={uploadInterviewPortraitImage}
-              />
-            ) : null}
+            <div className="interview-photo">
+              {data.interview.portraitImage ? (
+                <img className="interview-photo-image upload-photo" src={data.interview.portraitImage} alt={data.interview.portraitLabel} />
+              ) : (
+                <div className="interview-photo-placeholder">
+                  {edit({
+                    wrapperTag: 'div',
+                    displayTag: 'span',
+                    displayClassName: 'interview-photo-text',
+                    value: data.interview.portraitLabel,
+                    placeholder: '인물 라벨',
+                    className: 'section-inline-editor',
+                    inputClassName: 'section-inline-input',
+                    onChange: (value) => updateSection('interview', { portraitLabel: value }),
+                  })}
+                </div>
+              )}
+              {isSettingMode ? (
+                <ImageUploadControl
+                  buttonLabel={data.interview.portraitImage ? '이미지 변경' : '이미지 추가'}
+                  className="image-upload-overlay image-upload-overlay--photo"
+                  onUpload={uploadInterviewPortraitImage}
+                />
+              ) : null}
+            </div>
           </div>
         </section>
 
@@ -1914,7 +1916,7 @@ function App() {
                   {isSettingMode ? (
                     <ImageUploadControl
                       buttonLabel={project.image ? '이미지 변경' : '이미지 추가'}
-                      className="image-upload-overlay"
+                      className="image-upload-overlay image-upload-overlay--media"
                       onUpload={(file) => uploadProjectImage(project.id, file)}
                     />
                   ) : null}

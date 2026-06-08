@@ -366,6 +366,22 @@ img {
   white-space: nowrap;
 }
 
+.image-upload-overlay--photo,
+.image-upload-overlay--media {
+  top: 16px;
+  right: 16px;
+}
+
+.image-upload-overlay--photo .image-upload-trigger,
+.image-upload-overlay--media .image-upload-trigger {
+  min-width: 96px;
+  padding: 10px 14px;
+  border: 1px solid rgba(255, 255, 255, 0.24);
+  background: rgba(0, 0, 0, 0.68);
+  color: #f3f1eb;
+  backdrop-filter: blur(12px);
+}
+
 .image-upload-input {
   position: absolute;
   inset: 0;
@@ -509,10 +525,32 @@ img {
   min-height: 420px;
   padding: 24px;
   border-radius: 22px;
+  overflow: hidden;
   background:
     linear-gradient(180deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.02)),
     #0c0c0c;
   color: rgba(243, 241, 235, 0.72);
+}
+
+.interview-photo-placeholder {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  height: 100%;
+  min-height: 372px;
+}
+
+.interview-photo-image {
+  position: absolute;
+  inset: 24px;
+  z-index: 0;
+  width: calc(100% - 48px);
+  height: calc(100% - 48px);
+  border-radius: 18px;
+  object-fit: cover;
 }
 
 .about-panel {
