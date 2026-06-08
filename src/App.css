@@ -338,6 +338,37 @@ img {
   overflow: hidden;
 }
 
+.image-upload-control {
+  position: absolute;
+  right: 16px;
+  bottom: 16px;
+  z-index: 8;
+  display: inline-flex;
+}
+
+.hero-portrait .image-upload-control,
+.interview-photo .image-upload-control,
+.project-media .image-upload-control {
+  position: absolute;
+  right: 14px;
+  bottom: 14px;
+  z-index: 9;
+}
+
+.image-upload-control .image-upload-trigger {
+  cursor: pointer;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.28);
+}
+
+.image-upload-input {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
 .portrait-face {
   position: absolute;
   left: 50%;
@@ -544,10 +575,31 @@ img {
   border-radius: 24px;
 }
 
-.career-card-actions {
+.career-card-actions,
+.career-card-footer {
   display: flex;
   justify-content: flex-end;
+  gap: 10px;
   margin-bottom: 14px;
+}
+
+.career-card-footer {
+  margin-top: 14px;
+  margin-bottom: 0;
+}
+
+.career-bullet-list {
+  display: grid;
+  gap: 10px;
+  margin: 14px 0 0;
+  padding-left: 18px;
+}
+
+.career-bullet-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .career-card h3,
@@ -898,6 +950,19 @@ img {
     linear-gradient(135deg, #151515 0%, #0a0a0a 100%);
 }
 
+.project-hidden-badge {
+  position: absolute;
+  right: 16px;
+  top: 14px;
+  z-index: 3;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(0, 0, 0, 0.7);
+  color: #f3f1eb;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .project-content {
   display: grid;
   align-content: start;
@@ -955,6 +1020,83 @@ img {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+.github-settings {
+  margin-top: 22px;
+}
+
+.github-settings-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 18px;
+}
+
+.github-field {
+  display: grid;
+  gap: 8px;
+  color: rgba(243, 241, 235, 0.88);
+  font-size: 14px;
+}
+
+.settings-input {
+  width: 100%;
+  min-height: 48px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3f1eb;
+  padding: 0 14px;
+}
+
+.settings-input::placeholder {
+  color: rgba(243, 241, 235, 0.38);
+}
+
+.github-actions {
+  display: flex;
+  align-items: end;
+}
+
+.github-repo-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.github-repo-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-radius: 18px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.github-repo-main {
+  display: grid;
+  gap: 4px;
+}
+
+.github-repo-main strong {
+  font-size: 14px;
+}
+
+.github-repo-main span,
+.github-repo-meta {
+  color: rgba(243, 241, 235, 0.62);
+  font-size: 12px;
+}
+
+.settings-error,
+.settings-empty,
+.settings-status {
+  margin: 12px 0 0;
+  color: rgba(243, 241, 235, 0.72);
+  font-size: 13px;
 }
 
 .settings-content {

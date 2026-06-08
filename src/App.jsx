@@ -80,6 +80,9 @@ const buildProjectFromRepo = (repo) => ({
   purpose: normalizeText(repo.purpose, '포트폴리오 프로젝트 정리'),
   image: '',
   repoUrl: normalizeText(repo.html_url, ''),
+  repoFullName: normalizeText(repo.fullName, ''),
+  source: 'github',
+  visible: true,
   firebaseId: '',
 })
 
@@ -96,6 +99,9 @@ const buildProjectFromFirebaseDoc = (row) => {
     purpose: normalizeText(row?.purpose || row?.goal || row?.objective, '포트폴리오 프로젝트 정리'),
     image: normalizeText(row?.image || row?.image_url || row?.imageUrl, ''),
     repoUrl: normalizeText(row?.repoUrl || row?.repo_url || row?.repoURL || row?.url, ''),
+    repoFullName: normalizeText(row?.repoFullName || row?.fullName || row?.full_name, ''),
+    source: normalizeText(row?.source || 'firebase', 'firebase'),
+    visible: row?.visible === false ? false : true,
   }
 }
 
@@ -363,7 +369,10 @@ function normalizeData(raw) {
         purpose: item.purpose || '',
         image: item.image || '',
         repoUrl: item.repoUrl || '',
+        repoFullName: item.repoFullName || item.fullName || '',
         firebaseId: item.firebaseId || '',
+        source: item.source || (item.repoUrl ? 'github' : 'manual'),
+        visible: item.visible === false ? false : true,
       }))
     : next.projects.items
 
@@ -996,7 +1005,7 @@ function App() {
     })
   }
 
-  const importGithubRepo = async (repo) => {
+  const importGithubRepo = async (repo, visible = true) => {
     try {
       setGithubLoading(true)
       clearGithubResults()
@@ -1016,6 +1025,7 @@ function App() {
         ...repo,
         ...detail,
         topics: Array.isArray(detail.topics) ? detail.topics : repo.topics,
+        visible,
       })
 
       setData((prev) => {
@@ -1031,7 +1041,7 @@ function App() {
         }
 
         const nextItems = prev.projects.items.map((item, itemIndex) =>
-          itemIndex === index ? { ...item, ...project, id: item.id } : item,
+          itemIndex === index ? { ...item, ...project, id: item.id, visible } : item,
         )
 
         return {
@@ -1049,6 +1059,23 @@ function App() {
     } finally {
       setGithubLoading(false)
     }
+  }
+
+  const toggleGithubRepoVisibility = async (repo, checked) => {
+    if (checked) {
+      await importGithubRepo(repo, true)
+      return
+    }
+
+    setData((prev) => ({
+      ...prev,
+      projects: {
+        ...prev.projects,
+        items: prev.projects.items.map((item) =>
+          item.repoUrl === repo.html_url ? { ...item, visible: false } : item,
+        ),
+      },
+    }))
   }
 
   const addHeroMeta = () =>
@@ -1096,6 +1123,30 @@ function App() {
       },
     }))
 
+  const addCareerBullet = (itemId) =>
+    setData((prev) => ({
+      ...prev,
+      career: {
+        ...prev.career,
+        items: prev.career.items.map((item) =>
+          item.id !== itemId ? item : { ...item, bullets: [...item.bullets, '새 항목'] },
+        ),
+      },
+    }))
+
+  const removeCareerBullet = (itemId, bulletIndex) =>
+    setData((prev) => ({
+      ...prev,
+      career: {
+        ...prev.career,
+        items: prev.career.items.map((item) =>
+          item.id !== itemId
+            ? item
+            : { ...item, bullets: item.bullets.filter((_, index) => index !== bulletIndex) },
+        ),
+      },
+    }))
+
   const addSkillGroup = () =>
     setData((prev) => ({
       ...prev,
@@ -1135,6 +1186,9 @@ function App() {
             purpose: '',
             image: '',
             repoUrl: '',
+            repoFullName: '',
+            source: 'manual',
+            visible: true,
           },
         ],
       },
@@ -1200,8 +1254,58 @@ function App() {
     ]
   }
 
+  const visibleProjects = isSettingMode
+    ? data.projects.items
+    : data.projects.items.filter((project) => project.visible !== false)
+
   const edit = (props) => <EditableField enabled={isSettingMode} onSave={saveDbPortfolio} {...props} />
-  const renderSettingsPanel = () => null
+  const renderSettingsPanel = () => (
+    <section className="settings-inline-stack github-settings reveal-up" aria-label="GitHub 연동">
+      <div className="settings-inline-header">
+        <div>
+          <p className="section-tag">GITHUB</p>
+          <h2 className="section-title">깃허브 연동</h2>
+          <p className="section-copy">아이디와 토큰으로 저장소 목록을 불러온 뒤, 체크박스로 프로젝트 섹션 표시 여부를 제어합니다.</p>
+        </div>
+        <div className="settings-inline-actions">
+          {githubStatus ? <span className="settings-status">{githubStatus}</span> : null}
+          {githubLoading ? <span className="settings-status">불러오는 중...</span> : null}
+        </div>
+      </div>
+
+      <div className="github-settings-grid">
+        <label className="github-field">
+          <span>GitHub 아이디</span>
+          <input className="settings-input" value={githubState.owner} onChange={(event) => updateGithubSetting('owner', event.target.value)} placeholder="예: milkeon" />
+        </label>
+        <label className="github-field">
+          <span>GitHub 토큰</span>
+          <input className="settings-input" type="password" value={githubState.token} onChange={(event) => updateGithubSetting('token', event.target.value)} placeholder="ghp_..." />
+        </label>
+        <div className="github-actions">
+          <button className="button primary" type="button" onClick={fetchGithubRepos} disabled={githubLoading}>저장소 불러오기</button>
+        </div>
+      </div>
+
+      {githubError ? <p className="settings-error">{githubError}</p> : null}
+
+      <div className="github-repo-list">
+        {githubState.repos.length ? githubState.repos.map((repo) => {
+          const isVisible = data.projects.items.some((item) => item.repoUrl === repo.html_url && item.visible !== false)
+          return (
+            <label className="github-repo-row" key={repo.fullName}>
+              <input type="checkbox" checked={isVisible} onChange={(event) => toggleGithubRepoVisibility(repo, event.target.checked)} />
+              <span className="github-repo-main">
+                <strong>{repo.fullName}</strong>
+                <span>{repo.description || '설명 없음'}</span>
+              </span>
+              <span className="github-repo-meta">{repo.language || '미지정'}</span>
+            </label>
+          )
+        }) : <p className="settings-empty">저장소를 아직 불러오지 않았습니다.</p>}
+      </div>
+    </section>
+  )
 
   const renderPortfolioPage = () => (
     <div className="page-shell">
@@ -1519,6 +1623,9 @@ function App() {
               <article className="career-card reveal-up" key={item.id}>
                 {isSettingMode ? (
                   <div className="career-card-actions">
+                    <button className="button secondary small" type="button" onClick={() => addCareerBullet(item.id)}>
+                      항목 추가
+                    </button>
                     <button className="button danger small" type="button" onClick={() => removeCareerItem(item.id)}>
                       삭제
                     </button>
@@ -1546,9 +1653,9 @@ function App() {
                   inputClassName: 'card-inline-input card-textarea-input',
                   onChange: (value) => updateArrayItem('career', 'items', item.id, { desc: value }),
                 })}
-                <ul>
+                <ul className="career-bullet-list">
                   {item.bullets.map((bullet, bulletIndex) => (
-                    <li key={`${item.id}-${bulletIndex}`}>
+                    <li className="career-bullet-item" key={`${item.id}-${bulletIndex}`}>
                       {edit({
                         wrapperTag: 'span',
                         displayTag: 'span',
@@ -1564,9 +1671,21 @@ function App() {
                             ),
                           }),
                       })}
+                      {isSettingMode ? (
+                        <button className="button secondary tiny" type="button" onClick={() => removeCareerBullet(item.id, bulletIndex)}>
+                          삭제
+                        </button>
+                      ) : null}
                     </li>
                   ))}
                 </ul>
+                {isSettingMode ? (
+                  <div className="career-card-footer">
+                    <button className="button secondary small" type="button" onClick={() => addCareerBullet(item.id)}>
+                      항목 추가
+                    </button>
+                  </div>
+                ) : null}
               </article>
             ))}
           </div>
@@ -1694,11 +1813,12 @@ function App() {
           </div>
 
           <div className="project-list">
-            {data.projects.items.map((project, index) => (
+            {visibleProjects.map((project, index) => (
               <article className={`project-card reveal-up ${index % 2 === 0 ? 'from-right' : 'from-left'}`} key={project.id}>
                 <div className="project-media">
                   <span className="project-media-tag">/</span>
                   {project.image ? <img className="project-image" src={project.image} alt={project.title} /> : <div className="project-image project-image-empty" aria-hidden="true" />}
+                  {isSettingMode && project.visible === false ? <span className="project-hidden-badge">숨김</span> : null}
                   {isSettingMode ? (
                     <ImageUploadControl
                       buttonLabel={project.image ? '이미지 변경' : '이미지 추가'}
