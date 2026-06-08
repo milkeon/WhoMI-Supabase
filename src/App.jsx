@@ -1209,6 +1209,108 @@ function App() {
                 </a>
               ))}
             </div>
+
+            {isSettingMode ? (
+              <div className="hero-inline-editor reveal-up" id="hero-edit">
+                <div className="settings-card-head">
+                  <div>
+                    <p className="settings-note">인라인 편집</p>
+                    <h2 className="section-title">메인 화면을 그대로 보면서 바로 수정</h2>
+                  </div>
+                  <button className="button primary small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
+                    {dbLoading ? '저장 중...' : 'Firebase 저장'}
+                  </button>
+                </div>
+
+                <div className="hero-inline-grid">
+                  <InputField label="상단 배지" value={data.hero.badge} onChange={(value) => updateSection('hero', { badge: value })} placeholder="배지 문구" />
+                  <InputField label="상단 문구" value={data.hero.kicker} onChange={(value) => updateSection('hero', { kicker: value })} placeholder="상단 안내 문구" />
+
+                  <div className="hero-inline-title-group">
+                    <p className="settings-note">큰 제목</p>
+                    <div className="hero-inline-title-lines">
+                      {data.hero.titleLines.map((line, index) => (
+                        <InputField
+                          key={`hero-title-${index}`}
+                          label={`제목 ${index + 1}`}
+                          value={line}
+                          onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
+                          placeholder="제목 줄"
+                        />
+                      ))}
+                    </div>
+                  </div>
+
+                  <TextAreaField label="소개 문구" value={data.hero.copy} onChange={(value) => updateSection('hero', { copy: value })} placeholder="소개 문구" rows={4} />
+
+                  <div className="hero-inline-title-group">
+                    <p className="settings-note">메타 정보</p>
+                    <div className="hero-inline-meta-grid">
+                      {data.hero.meta.map((item) => (
+                        <div className="hero-inline-meta-item" key={item.id}>
+                          <InputField
+                            label={`${item.id} - 라벨`}
+                            value={item.label}
+                            onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
+                            placeholder="라벨"
+                          />
+                          <InputField
+                            label={`${item.id} - 값`}
+                            value={item.value}
+                            onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
+                            placeholder="값"
+                          />
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="hero-inline-title-group">
+                    <p className="settings-note">버튼 링크</p>
+                    <div className="hero-inline-meta-grid">
+                      {data.hero.actions.map((action) => (
+                        <div className="hero-inline-meta-item" key={action.id}>
+                          <InputField
+                            label={`${action.id} - 라벨`}
+                            value={action.label}
+                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
+                            placeholder="버튼 라벨"
+                          />
+                          <InputField
+                            label={`${action.id} - 링크`}
+                            value={action.href}
+                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
+                            placeholder="#"
+                          />
+                          <SelectField
+                            label={`${action.id} - 종류`}
+                            value={action.variant}
+                            onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
+                          >
+                            <option value="primary">primary</option>
+                            <option value="secondary">secondary</option>
+                          </SelectField>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="hero-inline-title-group">
+                    <p className="settings-note">사진 영역</p>
+                    <div className="hero-inline-meta-grid">
+                      <InputField label="사진 라벨" value={data.hero.portraitLabel} onChange={(value) => updateSection('hero', { portraitLabel: value })} placeholder="사진 라벨" />
+                      <InputField label="캡션 상단" value={data.hero.portraitCaptionTop} onChange={(value) => updateSection('hero', { portraitCaptionTop: value })} placeholder="캡션 상단" />
+                      <InputField label="캡션 하단" value={data.hero.portraitCaptionBottom} onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })} placeholder="캡션 하단" />
+                      <InputField label="이미지 URL" value={data.hero.portraitImage} onChange={(value) => updateSection('hero', { portraitImage: value })} placeholder="이미지 주소" />
+                      <label className="upload-inline">
+                        <span>이미지 업로드</span>
+                        <input type="file" accept="image/*" onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])} />
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : null}
           </div>
 
           <div className="hero-portrait" aria-label="사진1 영역">
@@ -1237,107 +1339,6 @@ function App() {
           </div>
         </section>
 
-        {isSettingMode ? (
-          <section className="section-card hero-inline-editor reveal-up" id="hero-edit">
-            <div className="settings-card-head">
-              <div>
-                <p className="settings-note">인라인 편집</p>
-                <h2 className="section-title">메인 화면을 그대로 보면서 바로 수정</h2>
-              </div>
-              <button className="button primary small" type="button" onClick={saveDbPortfolio} disabled={dbLoading}>
-                {dbLoading ? '저장 중...' : 'Firebase 저장'}
-              </button>
-            </div>
-
-            <div className="hero-inline-grid">
-              <InputField label="상단 배지" value={data.hero.badge} onChange={(value) => updateSection('hero', { badge: value })} placeholder="배지 문구" />
-              <InputField label="상단 문구" value={data.hero.kicker} onChange={(value) => updateSection('hero', { kicker: value })} placeholder="상단 안내 문구" />
-
-              <div className="hero-inline-title-group">
-                <p className="settings-note">큰 제목</p>
-                <div className="hero-inline-title-lines">
-                  {data.hero.titleLines.map((line, index) => (
-                    <InputField
-                      key={`hero-title-${index}`}
-                      label={`제목 ${index + 1}`}
-                      value={line}
-                      onChange={(value) => updateSection('hero', { titleLines: data.hero.titleLines.map((current, currentIndex) => (currentIndex === index ? value : current)) })}
-                      placeholder="제목 줄"
-                    />
-                  ))}
-                </div>
-              </div>
-
-              <TextAreaField label="소개 문구" value={data.hero.copy} onChange={(value) => updateSection('hero', { copy: value })} placeholder="소개 문구" rows={4} />
-
-              <div className="hero-inline-title-group">
-                <p className="settings-note">메타 정보</p>
-                <div className="hero-inline-meta-grid">
-                  {data.hero.meta.map((item) => (
-                    <div className="hero-inline-meta-item" key={item.id}>
-                      <InputField
-                        label={`${item.id} - 라벨`}
-                        value={item.label}
-                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { label: value })}
-                        placeholder="라벨"
-                      />
-                      <InputField
-                        label={`${item.id} - 값`}
-                        value={item.value}
-                        onChange={(value) => updateArrayItem('hero', 'meta', item.id, { value })}
-                        placeholder="값"
-                      />
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="hero-inline-title-group">
-                <p className="settings-note">버튼 링크</p>
-                <div className="hero-inline-meta-grid">
-                  {data.hero.actions.map((action) => (
-                    <div className="hero-inline-meta-item" key={action.id}>
-                      <InputField
-                        label={`${action.id} - 라벨`}
-                        value={action.label}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { label: value })}
-                        placeholder="버튼 라벨"
-                      />
-                      <InputField
-                        label={`${action.id} - 링크`}
-                        value={action.href}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { href: value })}
-                        placeholder="#"
-                      />
-                      <SelectField
-                        label={`${action.id} - 종류`}
-                        value={action.variant}
-                        onChange={(value) => updateArrayItem('hero', 'actions', action.id, { variant: value })}
-                      >
-                        <option value="primary">primary</option>
-                        <option value="secondary">secondary</option>
-                      </SelectField>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="hero-inline-title-group">
-                <p className="settings-note">사진 영역</p>
-                <div className="hero-inline-meta-grid">
-                  <InputField label="사진 라벨" value={data.hero.portraitLabel} onChange={(value) => updateSection('hero', { portraitLabel: value })} placeholder="사진 라벨" />
-                  <InputField label="캡션 상단" value={data.hero.portraitCaptionTop} onChange={(value) => updateSection('hero', { portraitCaptionTop: value })} placeholder="캡션 상단" />
-                  <InputField label="캡션 하단" value={data.hero.portraitCaptionBottom} onChange={(value) => updateSection('hero', { portraitCaptionBottom: value })} placeholder="캡션 하단" />
-                  <InputField label="이미지 URL" value={data.hero.portraitImage} onChange={(value) => updateSection('hero', { portraitImage: value })} placeholder="이미지 주소" />
-                  <label className="upload-inline">
-                    <span>이미지 업로드</span>
-                    <input type="file" accept="image/*" onChange={(event) => updateImageFile('hero', 'portraitImage', event.target.files?.[0])} />
-                  </label>
-                </div>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <section className="section-interview section-grid reveal-up" id="about">
           <div className="section-heading about-panel">
