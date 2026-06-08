@@ -1222,6 +1222,16 @@ img {
   top: 10px;
   right: 10px;
   flex: 0 0 auto;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  padding: 6px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.58);
+  color: #f3f1eb;
 }
 
 .hero-inline-editor,
