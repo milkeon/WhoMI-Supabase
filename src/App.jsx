@@ -63,28 +63,131 @@ const normalizeText = (value, fallback = '') => {
   return text || fallback
 }
 
-const formatRepoTech = (repo) => {
-  const list = []
-  if (Array.isArray(repo.topics)) list.push(...repo.topics.filter(Boolean))
-  if (repo.language) list.push(repo.language)
-  return list.length ? [...new Set(list)].join(', ') : '미지정'
+const sanitizeMarkdownText = (value) =>
+  String(value || '')
+    .replace(/```[\s\S]*?```/g, ' ')
+    .replace(/!\[[^\]]*\]\(([^)]+)\)/g, ' ')
+    .replace(/\[([^\]]+)\]\(([^)]+)\)/g, '$1')
+    .replace(/`([^`]+)`/g, '$1')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim()
+
+const splitSentences = (value) =>
+  sanitizeMarkdownText(value)
+    .split(/(?<=[.!?。！？])\s+/)
+    .map((item) => item.trim())
+    .filter(Boolean)
+
+const takeReadableText = (value, limit = 140) => {
+  const text = sanitizeMarkdownText(value)
+  if (!text) return ''
+  const sentences = splitSentences(text)
+  const next = sentences.length ? sentences.slice(0, 2).join(' ') : text
+  return next.length > limit ? `${next.slice(0, limit - 1).trimEnd()}…` : next
 }
 
-const buildProjectFromRepo = (repo) => ({
-  id: createId(),
-  title: normalizeText(repo.name, 'GitHub 프로젝트'),
-  type: repo.private ? 'GitHub / 비공개' : 'GitHub / 공개',
-  tech: formatRepoTech(repo),
-  language: normalizeText(repo.language, '미지정'),
-  overview: normalizeText(repo.description, 'GitHub 저장소에서 불러온 프로젝트입니다.'),
-  purpose: normalizeText(repo.purpose, '포트폴리오 프로젝트 정리'),
-  image: '',
-  repoUrl: normalizeText(repo.html_url, ''),
-  repoFullName: normalizeText(repo.fullName, ''),
-  source: 'github',
-  visible: true,
-  firebaseId: '',
-})
+const extractGithubSection = (readmeText, keywords = []) => {
+  const lines = String(readmeText || '').replace(/\r\n/g, '\n').split('\n')
+  const targets = keywords.map((item) => String(item || '').toLowerCase()).filter(Boolean)
+  if (!targets.length) return ''
+
+  for (let index = 0; index < lines.length; index += 1) {
+    const headingMatch = lines[index].match(/^#{1,6}\s+(.+)$/)
+    if (!headingMatch) continue
+
+    const heading = headingMatch[1].trim().toLowerCase()
+    if (!targets.some((target) => heading.includes(target))) continue
+
+    const buffer = []
+    for (let cursor = index + 1; cursor < lines.length; cursor += 1) {
+      const line = lines[cursor]
+      if (/^#{1,6}\s+/.test(line)) break
+      if (!line.trim()) {
+        if (buffer.length) break
+        continue
+      }
+      if (/^```/.test(line)) continue
+      buffer.push(line.trim())
+    }
+
+    return takeReadableText(buffer.join(' '), 180)
+  }
+
+  return ''
+}
+
+const collectGithubTech = (repo, readmeText = '') => {
+  const keywords = [
+    'React',
+    'Next.js',
+    'Vite',
+    'Vue',
+    'Svelte',
+    'TypeScript',
+    'JavaScript',
+    'Node.js',
+    'Express',
+    'Firebase',
+    'Firestore',
+    'Supabase',
+    'Tailwind CSS',
+    'CSS Modules',
+    'SCSS',
+    'Sass',
+    'GSAP',
+    'Three.js',
+    'Framer Motion',
+    'Redux',
+    'Zustand',
+    'Prisma',
+    'MySQL',
+    'PostgreSQL',
+    'MongoDB',
+    'Python',
+    'Django',
+    'Flask',
+    'FastAPI',
+    'C#',
+    '.NET',
+    'ASP.NET',
+    'Java',
+    'Spring Boot',
+    'Kotlin',
+    'Swift',
+    'React Native',
+    'Electron',
+    'Vercel',
+    'Netlify',
+  ]
+
+  const lowered = sanitizeMarkdownText(readmeText).toLowerCase()
+  const matches = keywords.filter((keyword) => lowered.includes(keyword.toLowerCase()))
+  const topicMatches = Array.isArray(repo.topics) ? repo.topics.filter(Boolean).map((topic) => String(topic).trim()) : []
+  const list = [...matches, ...topicMatches, repo.language].filter(Boolean)
+  return list.length ? [...new Set(list)].slice(0, 4).join(', ') : '미지정'
+}
+
+const buildProjectFromRepo = (repo, readmeText = '') => {
+  const overviewFromReadme = extractGithubSection(readmeText, ['overview', '개요', '소개', 'summary', 'about']) || takeReadableText(readmeText, 150)
+  const purposeFromReadme = extractGithubSection(readmeText, ['purpose', '목적', 'goal', 'objective', 'why', 'project purpose'])
+
+  return {
+    id: createId(),
+    title: normalizeText(repo.name, 'GitHub 프로젝트'),
+    type: repo.private ? 'GitHub / 비공개' : 'GitHub / 공개',
+    tech: collectGithubTech(repo, readmeText),
+    language: normalizeText(repo.language, '미지정'),
+    overview: normalizeText(overviewFromReadme || repo.description, 'GitHub 저장소에서 불러온 프로젝트입니다.'),
+    purpose: normalizeText(purposeFromReadme || repo.purpose, '포트폴리오 프로젝트 정리'),
+    image: '',
+    repoUrl: normalizeText(repo.html_url, ''),
+    repoFullName: normalizeText(repo.fullName, ''),
+    source: 'github',
+    visible: true,
+    firebaseId: '',
+  }
+}
 
 const buildProjectFromFirebaseDoc = (row) => {
   const firebaseId = row?.id == null ? '' : String(row.id)
@@ -103,6 +206,78 @@ const buildProjectFromFirebaseDoc = (row) => {
     source: normalizeText(row?.source || 'firebase', 'firebase'),
     visible: row?.visible === false ? false : true,
   }
+}
+
+const buildGithubHeaders = (token) => {
+  const headers = {
+    Accept: 'application/vnd.github+json',
+    'X-GitHub-Api-Version': '2022-11-28',
+  }
+
+  if (token) {
+    headers.Authorization = `Bearer ${token}`
+  }
+
+  return headers
+}
+
+const decodeGithubReadmeContent = (content) => {
+  if (!content) return ''
+
+  try {
+    const binary = window.atob(String(content).replace(/\s+/g, ''))
+    const bytes = Uint8Array.from(binary, (char) => char.charCodeAt(0))
+    return new TextDecoder('utf-8').decode(bytes)
+  } catch {
+    return ''
+  }
+}
+
+const fetchGithubReadmeText = async (fullName, token) => {
+  if (!fullName) return ''
+
+  const response = await fetch(`https://api.github.com/repos/${fullName}/readme`, {
+    headers: buildGithubHeaders(token),
+  })
+
+  if (!response.ok) {
+    return ''
+  }
+
+  const payload = await response.json()
+  if (typeof payload?.content === 'string') {
+    return decodeGithubReadmeContent(payload.content)
+  }
+
+  if (typeof payload?.download_url === 'string') {
+    const rawResponse = await fetch(payload.download_url, {
+      headers: buildGithubHeaders(token),
+    })
+    if (rawResponse.ok) {
+      return rawResponse.text()
+    }
+  }
+
+  return ''
+}
+
+const shouldUpgradeProjectText = (currentValue, nextValue, defaultTexts = []) => {
+  const current = normalizeText(currentValue, '')
+  const next = normalizeText(nextValue, '')
+  if (!next) return false
+  if (!current) return true
+  if (defaultTexts.some((text) => current.includes(text))) return true
+  return next.length > current.length + 12
+}
+
+const shouldUpgradeProjectTech = (currentValue, nextValue) => {
+  const current = normalizeText(currentValue, '')
+  const next = normalizeText(nextValue, '')
+  if (!next) return false
+  if (!current || current === '미지정') return true
+  const currentCount = current.split(',').map((item) => item.trim()).filter(Boolean).length
+  const nextCount = next.split(',').map((item) => item.trim()).filter(Boolean).length
+  return nextCount > currentCount
 }
 
 const SKILL_COLUMN_CLASSES = ['library-column', 'front-column', 'backend-column']
@@ -564,6 +739,7 @@ function App() {
   const [firebaseProjectsStatus, setFirebaseProjectsStatus] = useState('')
   const [firebaseHydrated, setFirebaseHydrated] = useState(false)
   const firebaseAutoSaveTimerRef = useRef(null)
+  const githubReadmeCacheRef = useRef(new Map())
   const savedAt = dbState.lastSavedAt ? new Date(dbState.lastSavedAt).toLocaleString('ko-KR', { hour12: true }) : ''
   const isSettingMode = mode === 'setting'
   useEffect(() => {
@@ -762,6 +938,72 @@ function App() {
     setFirebaseProjectsStatus('')
   }
 
+  const enrichGithubProjectsFromReadme = useCallback(
+    async (projects = data.projects.items, githubContext = githubState) => {
+      const githubProjects = (projects || []).filter((project) => project?.source === 'github' && project?.repoFullName)
+      if (!githubProjects.length) {
+        return
+      }
+
+      const token = githubContext.token.trim()
+      const repoMap = new Map((githubContext.repos || []).map((repo) => [String(repo.fullName || '').toLowerCase(), repo]))
+      const updates = []
+
+      for (const project of githubProjects) {
+        const repoKey = String(project.repoFullName || '').trim().toLowerCase()
+        if (!repoKey) continue
+
+        let summary = githubReadmeCacheRef.current.get(repoKey)
+        if (!summary) {
+          const repoMeta = repoMap.get(repoKey) || {}
+          const readmeText = await fetchGithubReadmeText(project.repoFullName, token)
+          summary = {
+            tech: collectGithubTech(repoMeta, readmeText),
+            overview: extractGithubSection(readmeText, ['overview', '개요', '소개', 'summary', 'about']) || takeReadableText(readmeText, 150),
+            purpose: extractGithubSection(readmeText, ['purpose', '목적', 'goal', 'objective', 'why', 'project purpose']),
+          }
+          githubReadmeCacheRef.current.set(repoKey, summary)
+        }
+
+        updates.push({ project, summary })
+      }
+
+      if (!updates.length) return
+
+      setData((prev) => {
+        let changed = false
+        const items = prev.projects.items.map((item) => {
+          const found = updates.find(({ project }) => project.id === item.id)
+          if (!found) return item
+
+          const nextItem = { ...item }
+          const { summary } = found
+
+          if (shouldUpgradeProjectTech(item.tech, summary.tech)) {
+            nextItem.tech = summary.tech
+            changed = true
+          }
+
+          if (shouldUpgradeProjectText(item.overview, summary.overview, ['GitHub 저장소에서 불러온 프로젝트입니다.'])) {
+            nextItem.overview = normalizeText(summary.overview, item.overview)
+            changed = true
+          }
+
+          if (shouldUpgradeProjectText(item.purpose, summary.purpose, ['포트폴리오 프로젝트 정리'])) {
+            nextItem.purpose = normalizeText(summary.purpose, item.purpose)
+            changed = true
+          }
+
+          return nextItem
+        })
+
+        if (!changed) return prev
+        return { ...prev, projects: { ...prev.projects, items } }
+      })
+    },
+    [data.projects.items, githubState],
+  )
+
   const fetchGithubRepos = async () => {
     const owner = githubState.owner.trim()
     const token = githubState.token.trim()
@@ -875,9 +1117,20 @@ function App() {
         throw new Error('저장된 포트폴리오 데이터가 없습니다.')
       }
 
+      const nextSettings = nextSnapshotData.settings && typeof nextSnapshotData.settings === 'object' ? nextSnapshotData.settings : {}
+      const nextGithubState = nextSettings.githubState && typeof nextSettings.githubState === 'object' ? nextSettings.githubState : null
+
       setData(clone(nextData))
       setDbState((prev) => {
-        const nextSettings = nextSnapshotData.settings && typeof nextSnapshotData.settings === 'object' ? nextSnapshotData.settings : {}
+        if (nextGithubState) {
+          setGithubState((current) => ({
+            ...current,
+            ...nextGithubState,
+            owner: normalizeText(nextGithubState.owner || current.owner, ''),
+            token: normalizeText(nextGithubState.token || current.token, ''),
+            repos: Array.isArray(nextGithubState.repos) ? nextGithubState.repos : current.repos,
+          }))
+        }
 
         return {
           ...prev,
@@ -888,6 +1141,7 @@ function App() {
         }
       })
       setDbStatus('Firebase에서 포트폴리오를 불러왔습니다.')
+      void enrichGithubProjectsFromReadme(nextData, nextGithubState || githubState)
     } catch (error) {
       setDbError(error instanceof Error ? error.message : 'Firebase에서 불러오지 못했습니다.')
     }
@@ -914,6 +1168,7 @@ function App() {
             pagesCollection,
             pageDocId,
             projectsCollection: dbState.projectsCollection.trim(),
+            githubState: clone(githubState),
           },
         },
         { merge: true },
@@ -924,7 +1179,7 @@ function App() {
     } catch (error) {
       setDbError(error instanceof Error ? error.message : 'Firebase에 저장하지 못했습니다.')
     }
-  }, [data, dbState])
+  }, [data, dbState, githubState])
 
   /* eslint-disable react-hooks/exhaustive-deps */
   useEffect(() => {
@@ -1102,23 +1357,21 @@ function App() {
       setGithubLoading(true)
       clearGithubResults()
 
-      const headers = {
-        Accept: 'application/vnd.github+json',
-        'X-GitHub-Api-Version': '2022-11-28',
-      }
-
-      if (githubState.token.trim()) {
-        headers.Authorization = `Bearer ${githubState.token.trim()}`
-      }
+      const token = githubState.token.trim()
+      const headers = buildGithubHeaders(token)
 
       const detailResponse = await fetch(`https://api.github.com/repos/${repo.fullName}`, { headers })
       const detail = detailResponse.ok ? await detailResponse.json() : repo
-      const project = buildProjectFromRepo({
-        ...repo,
-        ...detail,
-        topics: Array.isArray(detail.topics) ? detail.topics : repo.topics,
-        visible,
-      })
+      const readmeText = await fetchGithubReadmeText(repo.fullName, token)
+      const project = buildProjectFromRepo(
+        {
+          ...repo,
+          ...detail,
+          topics: Array.isArray(detail.topics) ? detail.topics : repo.topics,
+          visible,
+        },
+        readmeText,
+      )
 
       setData((prev) => {
         const index = prev.projects.items.findIndex((item) => item.repoUrl && item.repoUrl === project.repoUrl)
